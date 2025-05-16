@@ -25,16 +25,24 @@ interface AssignStudentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   laptop: Laptop | null;
-  students: Student[];
-  laptops: Laptop[]; // needed to find unassigned students
+  students: Student[]; // Should be students in the current room
+  laptops: Laptop[]; // Should be laptops in the current room
   onAssign: (laptopId: string, studentId: string) => void;
 }
 
 export function AssignStudentDialog({ open, onOpenChange, laptop, students, laptops, onAssign }: AssignStudentDialogProps) {
   const [selectedStudentId, setSelectedStudentId] = useState<string | undefined>(undefined);
   
-  const assignedStudentIds = new Set(laptops.map(l => l.studentId).filter(Boolean));
-  const availableStudents = students.filter(s => !assignedStudentIds.has(s.id) || (laptop && s.id === laptop.studentId));
+  // Students available for assignment are those in the current room
+  // who are not already assigned to any other laptop in the current room,
+  // OR the student currently assigned to THIS laptop (if any).
+  const assignedStudentIdsInCurrentRoom = new Set(
+    laptops.map(l => l.studentId).filter(Boolean)
+  );
+
+  const availableStudents = students.filter(s => 
+    !assignedStudentIdsInCurrentRoom.has(s.id) || (laptop && s.id === laptop.studentId)
+  );
 
 
   useEffect(() => {
@@ -58,7 +66,7 @@ export function AssignStudentDialog({ open, onOpenChange, laptop, students, lapt
         <DialogHeader>
           <DialogTitle>Assign Student to Laptop: {laptop.login}</DialogTitle>
           <DialogDescription>
-            Select a student to assign to this laptop. Only unassigned students are shown.
+            Select a student to assign to this laptop. Only available students from the current room are shown.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -81,7 +89,7 @@ export function AssignStudentDialog({ open, onOpenChange, laptop, students, lapt
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem value="no-students" disabled>No available students</SelectItem>
+                  <SelectItem value="no-students" disabled>No available students in this room</SelectItem>
                 )}
               </SelectContent>
             </Select>

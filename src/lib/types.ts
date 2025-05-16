@@ -1,20 +1,28 @@
 
+export interface Room {
+  id: string;
+  name: string;
+  rows: number;
+  cols: number;
+}
+
 export interface Laptop {
   id: string;
   login: string;
-  password?: string; // Password might be sensitive, consider how to handle
-  locationId: number | null; // Corresponds to Desk ID
-  studentId: string | null; // Corresponds to Student ID
-  notes?: string; // Notes for the laptop
+  password?: string;
+  locationId: number | null; 
+  studentId: string | null; 
+  notes?: string;
+  roomId: string; // Added roomId
 }
 
 export interface Student {
   id: string;
   name: string;
   groupNumber: string;
+  roomId: string; // Added roomId
 }
 
 export interface Desk {
   id: number;
-  // Potentially add row/col for explicit positioning if needed later
 }
