@@ -29,6 +29,8 @@ const roomFormSchema = z.object({
   name: z.string().min(1, { message: "Room name is required." }),
   rows: z.coerce.number().min(1, { message: "Rows must be at least 1." }).max(10, { message: "Rows cannot exceed 10." }),
   cols: z.coerce.number().min(1, { message: "Columns must be at least 1." }).max(10, { message: "Columns cannot exceed 10." }),
+  rowGap: z.coerce.number().min(0, "Gap must be 0 or more.").max(3, "Gap cannot exceed 3.").optional().default(0),
+  colGap: z.coerce.number().min(0, "Gap must be 0 or more.").max(3, "Gap cannot exceed 3.").optional().default(0),
 });
 
 type RoomFormValues = z.infer<typeof roomFormSchema>;
@@ -43,15 +45,17 @@ interface RoomFormDialogProps {
 export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: RoomFormDialogProps) {
   const form = useForm<RoomFormValues>({
     resolver: zodResolver(roomFormSchema),
-    defaultValues: initialData || { name: "", rows: 5, cols: 6 },
+    defaultValues: initialData 
+      ? { ...initialData, rowGap: initialData.rowGap ?? 0, colGap: initialData.colGap ?? 0 } 
+      : { name: "", rows: 5, cols: 6, rowGap: 0, colGap: 0 },
   });
 
  useEffect(() => {
     if (open) {
       if (initialData) {
-        form.reset(initialData);
+        form.reset({ ...initialData, rowGap: initialData.rowGap ?? 0, colGap: initialData.colGap ?? 0 });
       } else {
-        form.reset({ name: "", rows: 5, cols: 6 });
+        form.reset({ name: "", rows: 5, cols: 6, rowGap: 0, colGap: 0 });
       }
     }
   }, [initialData, form, open]);
@@ -63,11 +67,11 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-card">
+      <DialogContent className="sm:max-w-md bg-card">
         <DialogHeader>
           <DialogTitle>{initialData ? "Edit Room" : "Add New Room"}</DialogTitle>
           <DialogDescription>
-            {initialData ? "Update the room's details." : "Enter the name and dimensions for the new room."}
+            {initialData ? "Update the room's details and layout." : "Enter the name, dimensions, and corridor gaps for the new room."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -85,32 +89,62 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="rows"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Number of Rows</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="e.g., 5" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="cols"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Number of Columns</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="e.g., 6" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="rows"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Number of Rows</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="e.g., 5" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="cols"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Number of Columns</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="e.g., 6" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="rowGap"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Row Gap (Corridors)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="e.g., 0 or 1" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="colGap"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Column Gap (Corridors)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="e.g., 0 or 1" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit">{initialData ? "Save Changes" : "Add Room"}</Button>
@@ -121,3 +155,4 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
     </Dialog>
   );
 }
+

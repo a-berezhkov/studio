@@ -35,7 +35,7 @@ export default function HomePage() {
   
   const [laptops, setLaptops] = useState<Laptop[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  const [desks, setDesks] = useState<Desk[]>([]);
+  const [desks, setDesks] = useState<Desk[]>([]); // Represents actual desks, not visual grid cells
 
   const [isLaptopFormOpen, setIsLaptopFormOpen] = useState(false);
   const [editingLaptop, setEditingLaptop] = useState<Laptop | undefined>(undefined);
@@ -62,16 +62,21 @@ export default function HomePage() {
   const currentRoom = rooms.find(r => r.id === currentRoomId);
 
   useEffect(() => {
-    // Initialize with a default room if none exist
     if (rooms.length === 0) {
-      const defaultRoom: Room = { id: DEFAULT_ROOM_ID, name: "Main Classroom", rows: 5, cols: 6 };
+      const defaultRoom: Room = { 
+        id: DEFAULT_ROOM_ID, 
+        name: "Main Classroom", 
+        rows: 5, 
+        cols: 6,
+        rowGap: 0,
+        colGap: 0,
+      };
       setRooms([defaultRoom]);
       setCurrentRoomId(defaultRoom.id);
     } else if (!currentRoomId && rooms.length > 0) {
       setCurrentRoomId(rooms[0].id);
     }
   
-    // Mock data (ensure it's associated with the default room)
     const mockLaptops: Laptop[] = [
       { id: "laptop-1", login: "Room5-L01", password: "password1", locationId: 1, studentId: "student-1", notes: "This is a note for laptop 1.", roomId: DEFAULT_ROOM_ID },
       { id: "laptop-2", login: "Room5-L02", password: "password2", locationId: 2, studentId: null, notes: "", roomId: DEFAULT_ROOM_ID },
@@ -83,42 +88,45 @@ export default function HomePage() {
     ];
     setLaptops(mockLaptops);
     setStudents(mockStudents);
-  }, []); // Run once on mount to set up initial state
+  }, []); 
 
   useEffect(() => {
     if (currentRoom) {
       const newDesks = Array.from({ length: currentRoom.rows * currentRoom.cols }, (_, i) => ({ id: i + 1 }));
       setDesks(newDesks);
-      // When room changes, ensure laptops are not assigned to desks that don't exist in the new room
       setLaptops(prevLaptops => prevLaptops.map(lap => {
         if (lap.roomId === currentRoom.id && lap.locationId && lap.locationId > newDesks.length) {
-          return { ...lap, locationId: null }; // Unassign from desk if desk no longer exists
+          return { ...lap, locationId: null }; 
         }
         return lap;
       }));
-
     } else {
       setDesks([]);
     }
   }, [currentRoomId, rooms]);
 
 
-  const handleAddOrUpdateRoom = (data: { name: string; rows: number; cols: number }, roomId?: string) => {
+  const handleAddOrUpdateRoom = (data: { name: string; rows: number; cols: number; rowGap?: number; colGap?: number }, roomId?: string) => {
+    const roomData = {
+      name: data.name,
+      rows: data.rows,
+      cols: data.cols,
+      rowGap: data.rowGap ?? 0,
+      colGap: data.colGap ?? 0,
+    };
     if (roomId) {
-      setRooms(prevRooms => prevRooms.map(r => r.id === roomId ? { ...r, ...data } : r));
+      setRooms(prevRooms => prevRooms.map(r => r.id === roomId ? { ...r, ...roomData } : r));
     } else {
-      const newRoom: Room = { id: `room-${Date.now()}`, ...data };
+      const newRoom: Room = { id: `room-${Date.now()}`, ...roomData };
       setRooms(prevRooms => [...prevRooms, newRoom]);
-      setCurrentRoomId(newRoom.id); // Switch to the new room
+      setCurrentRoomId(newRoom.id); 
     }
     setEditingRoom(undefined);
     setIsRoomFormOpen(false);
   };
 
   const handleDeleteRoom = (roomIdToDelete: string) => {
-    // Prevent deleting the last room
     if (rooms.length <= 1) {
-      // TODO: Show a toast or alert message
       console.warn("Cannot delete the last room.");
       setItemToDelete(null);
       return;
@@ -143,7 +151,7 @@ export default function HomePage() {
       setLaptops(laps => laps.map(lap => {
         if (lap.id === laptopId) {
           const updatedLaptop = { ...lap, login: formData.login };
-          if (typeof formData.password === 'string') {
+          if (typeof formData.password === 'string') { // Only update password if provided (even if empty string)
             updatedLaptop.password = formData.password;
           }
           return updatedLaptop;
@@ -157,7 +165,7 @@ export default function HomePage() {
         password: formData.password || "", 
         locationId: laptopToCreateAtDesk ? laptopToCreateAtDesk.id : null,
         studentId: null,
-        notes: "",
+        notes: "", // Initialize notes
         roomId: currentRoomId,
       };
       setLaptops(laps => [...laps, newLaptop]);
@@ -212,16 +220,14 @@ export default function HomePage() {
   const handleDropLaptopOnDesk = (deskId: number, laptopIdToDrop: string) => {
     setLaptops(prevLaptops => {
       const droppedLaptop = prevLaptops.find(l => l.id === laptopIdToDrop);
-      if (!droppedLaptop || droppedLaptop.roomId !== currentRoomId) return prevLaptops; // Ensure laptop is in current room
+      if (!droppedLaptop || droppedLaptop.roomId !== currentRoomId) return prevLaptops; 
       
-      // Check if another laptop is already at this desk in the current room
       const existingLaptopAtDesk = prevLaptops.find(l => l.roomId === currentRoomId && l.locationId === deskId);
 
       return prevLaptops.map(lap => {
-        if (lap.roomId !== currentRoomId) return lap; // Only modify laptops in the current room
+        if (lap.roomId !== currentRoomId) return lap;
 
         if (lap.id === laptopIdToDrop) return { ...lap, locationId: deskId };
-        // If there was a laptop at the target desk, and it's not the one we're dropping, unassign its location
         if (existingLaptopAtDesk && lap.id === existingLaptopAtDesk.id && existingLaptopAtDesk.id !== laptopIdToDrop) {
           return { ...lap, locationId: null }; 
         }
@@ -232,6 +238,7 @@ export default function HomePage() {
   };
   
   const handleDeskClick = (deskId: number) => {
+    // deskId is the original ID (1 to rows*cols)
     const desk = desks.find(d => d.id === deskId);
     if (!desk || !currentRoomId) return;
 
@@ -247,11 +254,9 @@ export default function HomePage() {
   const handleAssignStudent = (laptopId: string, studentId: string) => {
     if (!currentRoomId) return;
     setLaptops(laps => laps.map(lap => {
-      if (lap.roomId !== currentRoomId) return lap; // Only modify laptops in current room
+      if (lap.roomId !== currentRoomId) return lap;
 
-      // Assign student to the target laptop
       if (lap.id === laptopId) return { ...lap, studentId: studentId };
-      // If this student was assigned to another laptop in the same room, unassign them from it
       if (lap.studentId === studentId && lap.id !== laptopId) return { ...lap, studentId: null };
       return lap;
     }));
@@ -296,6 +301,7 @@ export default function HomePage() {
   const openAssignStudentDialog = useCallback((laptop: Laptop) => {
     setLaptopToAssign(laptop);
     setIsAssignStudentOpen(true);
+    // setIsDeskActionModalOpen(false); // Keep desk action modal open in background or close? User preference. For now, let it stay.
   }, []);
 
   const requestAddLaptopToDesk = useCallback((desk: Desk) => {
@@ -324,13 +330,15 @@ export default function HomePage() {
         <section className="lg:col-span-2">
           {currentRoom ? (
             <ClassroomLayout
-              desks={desks}
+              desks={desks} // Pass the actual desks
               laptops={laptopsInCurrentRoom}
               students={studentsInCurrentRoom}
               onDropLaptopOnDesk={handleDropLaptopOnDesk}
-              onDeskClick={handleDeskClick}
+              onDeskClick={handleDeskClick} // This click refers to a click on an actual desk cell
               rows={currentRoom.rows}
               cols={currentRoom.cols}
+              rowGap={currentRoom.rowGap ?? 0}
+              colGap={currentRoom.colGap ?? 0}
             />
           ) : (
             <Card className="h-full flex items-center justify-center">
@@ -484,7 +492,7 @@ export default function HomePage() {
         onOpenChange={setIsAssignStudentOpen}
         laptop={laptopToAssign}
         students={studentsInCurrentRoom}
-        laptops={laptopsInCurrentRoom} // Pass laptops from the current room
+        laptops={laptopsInCurrentRoom} 
         onAssign={handleAssignStudent}
       />}
       {laptopToView && <ViewCredentialsDialog
@@ -528,3 +536,4 @@ export default function HomePage() {
     </div>
   );
 }
+

@@ -4,6 +4,8 @@ export interface Room {
   name: string;
   rows: number;
   cols: number;
+  rowGap?: number; // Optional: number of empty cells between rows
+  colGap?: number; // Optional: number of empty cells between columns
 }
 
 export interface Laptop {
@@ -26,3 +28,4 @@ export interface Student {
 export interface Desk {
   id: number;
 }
+
