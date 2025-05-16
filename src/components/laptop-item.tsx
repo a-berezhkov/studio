@@ -2,14 +2,15 @@
 "use client";
 
 import type { DragEvent } from "react";
-import type { Laptop, Student } from "@/lib/types";
+import type { Laptop, Student, Group } from "@/lib/types"; // Added Group
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Laptop as LaptopIcon, User, Edit3, Trash2, Eye, Link2, Unlink } from "lucide-react";
+import { Laptop as LaptopIcon, User, Edit3, Trash2, Eye, Link2, Unlink, Package } from "lucide-react"; // Added Package
 
 interface LaptopItemProps {
   laptop: Laptop;
   assignedStudent?: Student;
+  groups?: Group[]; // Added groups to find group name
   isDraggable?: boolean;
   onDragStart?: (event: DragEvent<HTMLDivElement>, laptopId: string) => void;
   onEdit: () => void;
@@ -24,6 +25,7 @@ interface LaptopItemProps {
 export function LaptopItem({
   laptop,
   assignedStudent,
+  groups, // Added groups
   isDraggable = false,
   onDragStart,
   onEdit,
@@ -41,6 +43,8 @@ export function LaptopItem({
       event.preventDefault();
     }
   };
+
+  const studentGroup = assignedStudent && groups ? groups.find(g => g.id === assignedStudent.groupId) : undefined;
 
   return (
     <Card 
@@ -65,9 +69,17 @@ export function LaptopItem({
       </CardHeader>
       <CardContent>
         {assignedStudent ? (
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-3">
-            <User className="w-4 h-4 text-accent-foreground" />
-            <span>{assignedStudent.name} ({assignedStudent.groupNumber})</span>
+          <div className="space-y-1 text-sm text-muted-foreground mb-3">
+            <div className="flex items-center space-x-2">
+                <User className="w-4 h-4 text-accent-foreground" />
+                <span>{assignedStudent.name}</span>
+            </div>
+            {studentGroup && (
+                <div className="flex items-center space-x-2 pl-1">
+                    <Package className="w-3.5 h-3.5 text-muted-foreground"/>
+                    <span>Group: {studentGroup.name}</span>
+                </div>
+            )}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground mb-3">No student assigned.</p>
@@ -75,7 +87,7 @@ export function LaptopItem({
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={onEdit} disabled={!isAdminAuthenticated}><Edit3 className="mr-1.5 h-4 w-4" /> Edit</Button>
           <Button variant="outline" size="sm" onClick={onViewCredentials}><Eye className="mr-1.5 h-4 w-4" /> Credentials</Button>
-          {laptop.locationId && ( // Actions relevant if laptop is on a desk
+          {laptop.locationId && ( 
             assignedStudent && onUnassignStudent ? (
               <Button variant="outline" size="sm" onClick={onUnassignStudent} disabled={!isAdminAuthenticated}>
                 <User className="mr-1.5 h-4 w-4" /> Unassign Student
@@ -86,7 +98,7 @@ export function LaptopItem({
               </Button>
             )
           )}
-          {!laptop.locationId && ( // Assign student if laptop is unassigned from a desk
+          {!laptop.locationId && ( 
              <Button variant="outline" size="sm" onClick={onAssignStudent} disabled={!isAdminAuthenticated}>
               <User className="mr-1.5 h-4 w-4" /> Assign Student
             </Button>
@@ -97,5 +109,3 @@ export function LaptopItem({
     </Card>
   );
 }
-
-    

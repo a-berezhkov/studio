@@ -2,9 +2,9 @@
 "use client";
 
 import type { DragEvent } from "react";
-import type { Laptop, Student, Desk } from "@/lib/types";
+import type { Laptop, Student, Desk, Group } from "@/lib/types"; // Added Group
 import { cn } from "@/lib/utils";
-import { Laptop as LaptopIcon, User as UserIcon, Computer } from "lucide-react";
+import { Laptop as LaptopIcon, User as UserIcon, Computer, Package } from "lucide-react"; // Added Package
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -12,12 +12,13 @@ interface DeskCellProps {
   desk: Desk;
   laptop?: Laptop;
   student?: Student;
+  group?: Group; // Added group
   onDrop: (laptopId: string) => void;
   onClick: () => void;
-  canDrop?: boolean; // New prop to control drop behavior
+  canDrop?: boolean;
 }
 
-export function DeskCell({ desk, laptop, student, onDrop, onClick, canDrop = false }: DeskCellProps) {
+export function DeskCell({ desk, laptop, student, group, onDrop, onClick, canDrop = false }: DeskCellProps) {
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     if (canDrop) {
       event.preventDefault();
@@ -38,6 +39,11 @@ export function DeskCell({ desk, laptop, student, onDrop, onClick, canDrop = fal
   };
 
   const hasLaptop = !!laptop;
+  const tooltipContent = [];
+  if (laptop) tooltipContent.push(`Laptop: ${laptop.login}`);
+  if (student) tooltipContent.push(`Student: ${student.name}`);
+  if (group) tooltipContent.push(`Group: ${group.name}`);
+
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -45,14 +51,14 @@ export function DeskCell({ desk, laptop, student, onDrop, onClick, canDrop = fal
         className={cn(
           "aspect-square flex flex-col items-center justify-center p-2 transition-all duration-150 ease-in-out transform hover:scale-105 hover:shadow-lg",
           hasLaptop ? "bg-secondary border-primary shadow-primary/20" : "bg-muted/50 hover:bg-accent/30",
-          onClick ? "cursor-pointer" : "cursor-default", // Only show pointer if onClick is available
+          onClick ? "cursor-pointer" : "cursor-default", 
           "border-2"
         )}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         onClick={onClick}
         aria-label={`Desk ${desk.id}${laptop ? `, occupied by laptop ${laptop.login}` : ', empty'}`}
-        tabIndex={onClick ? 0 : -1} // Make it focusable only if clickable
+        tabIndex={onClick ? 0 : -1} 
         onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onClick) onClick(); }}
       >
         <CardContent className="flex flex-col items-center justify-center p-1 w-full h-full">
@@ -63,10 +69,11 @@ export function DeskCell({ desk, laptop, student, onDrop, onClick, canDrop = fal
                 <TooltipTrigger>
                   <LaptopIcon className="w-6 h-6 md:w-8 md:h-8 text-primary" />
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>Laptop: {laptop.login}</p>
-                  {student && <p>Student: {student.name} ({student.groupNumber})</p>}
-                </TooltipContent>
+                {tooltipContent.length > 0 && (
+                  <TooltipContent>
+                    {tooltipContent.map((line, idx) => <p key={idx}>{line}</p>)}
+                  </TooltipContent>
+                )}
               </Tooltip>
             ) : (
                <Computer className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground opacity-50" />
@@ -76,14 +83,27 @@ export function DeskCell({ desk, laptop, student, onDrop, onClick, canDrop = fal
                 <TooltipTrigger>
                    <UserIcon className="w-4 h-4 md:w-5 md:h-5 text-accent-foreground" />
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>Student: {student.name}</p>
-                  <p>Group: {student.groupNumber}</p>
-                </TooltipContent>
+                 {tooltipContent.length > 0 && (
+                  <TooltipContent>
+                    {tooltipContent.map((line, idx) => <p key={idx}>{line}</p>)}
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            )}
+             {laptop && student && group && (
+               <Tooltip>
+                <TooltipTrigger>
+                    <Package className="w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground" />
+                </TooltipTrigger>
+                 {tooltipContent.length > 0 && (
+                  <TooltipContent>
+                    {tooltipContent.map((line, idx) => <p key={idx}>{line}</p>)}
+                  </TooltipContent>
+                )}
               </Tooltip>
             )}
           </div>
-          {laptop && !student && (
+           {laptop && (!student || !group) && (
              <div className="w-4 h-4 md:w-5 md:h-5" /> 
           )}
         </CardContent>
@@ -91,5 +111,3 @@ export function DeskCell({ desk, laptop, student, onDrop, onClick, canDrop = fal
     </TooltipProvider>
   );
 }
-
-    

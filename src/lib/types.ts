@@ -1,4 +1,9 @@
 
+export interface Group {
+  id: string;
+  name: string;
+}
+
 export interface Room {
   id: string;
   name: string;
@@ -15,14 +20,13 @@ export interface Laptop {
   locationId: number | null; 
   studentId: string | null; 
   notes?: string;
-  roomId: string; // Added roomId
+  roomId: string; 
 }
 
 export interface Student {
   id: string;
   name: string;
-  groupNumber: string;
-  roomId: string; // Added roomId
+  groupId: string; // Changed from groupNumber, removed roomId
 }
 
 export interface Desk {

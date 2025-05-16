@@ -2,12 +2,10 @@
 "use client";
 
 import { useState, useEffect, DragEvent, useCallback } from "react";
-import type { Room, Laptop, Student, Desk } from "@/lib/types";
+import type { Room, Laptop, Student, Desk, Group } from "@/lib/types"; // Added Group
 import { ClassroomLayout } from "@/components/classroom-layout";
 import { LaptopItem } from "@/components/laptop-item";
-// StudentItem no longer directly used for a list here
 import { LaptopFormDialog } from "@/components/laptop-form-dialog";
-// StudentFormDialog no longer used here
 import { RoomFormDialog, type RoomSubmitData } from "@/components/room-form-dialog";
 import { AssignStudentDialog } from "@/components/assign-student-dialog";
 import { ViewCredentialsDialog } from "@/components/view-credentials-dialog";
@@ -19,7 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Edit3, Trash2, Eye, UserPlus, Users, Laptop as LaptopIconLucide, Home, Edit, LogIn, LogOut, ShieldAlert } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, Eye, UserPlus, Users, Laptop as LaptopIconLucide, Home, Edit, LogIn, LogOut, ShieldAlert, Package } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
@@ -31,6 +29,7 @@ export type DeskActionData = {
 };
 
 const DEFAULT_ROOM_ID = "room-default";
+const DEFAULT_GROUP_ID = "group-default"; // Added
 const ADMIN_LOGIN = "admin";
 const ADMIN_PASSWORD = "password";
 
@@ -43,16 +42,13 @@ export default function HomePage() {
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   
   const [laptops, setLaptops] = useState<Laptop[]>([]);
-  const [students, setStudents] = useState<Student[]>([]); // Still needed for display
+  const [students, setStudents] = useState<Student[]>([]); 
+  const [groups, setGroups] = useState<Group[]>([]); // Added groups state
   const [desks, setDesks] = useState<Desk[]>([]);
 
   const [isLaptopFormOpen, setIsLaptopFormOpen] = useState(false);
   const [editingLaptop, setEditingLaptop] = useState<Laptop | undefined>(undefined);
   const [laptopToCreateAtDesk, setLaptopToCreateAtDesk] = useState<Desk | null>(null);
-
-  // Student form state removed
-  // const [isStudentFormOpen, setIsStudentFormOpen] = useState(false);
-  // const [editingStudent, setEditingStudent] = useState<Student | undefined>(undefined);
 
   const [isRoomFormOpen, setIsRoomFormOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | undefined>(undefined);
@@ -64,7 +60,7 @@ export default function HomePage() {
   const [laptopToView, setLaptopToView] = useState<Laptop | null>(null);
   
   const [draggedLaptopId, setDraggedLaptopId] = useState<string | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<{ type: 'laptop' | 'room', id: string } | null>(null); // Student type removed
+  const [itemToDelete, setItemToDelete] = useState<{ type: 'laptop' | 'room', id: string } | null>(null);
 
   const [currentActionDesk, setCurrentActionDesk] = useState<DeskActionData | null>(null);
   const [isDeskActionModalOpen, setIsDeskActionModalOpen] = useState(false);
@@ -75,8 +71,10 @@ export default function HomePage() {
     const storedRooms = localStorage.getItem('rooms');
     const storedLaptops = localStorage.getItem('laptops');
     const storedStudents = localStorage.getItem('students');
+    const storedGroups = localStorage.getItem('groups'); // Load groups
     const storedCurrentRoomId = localStorage.getItem('currentRoomId');
     let defaultRoomCreated = false;
+    let defaultGroupCreated = false;
 
     if (storedRooms) {
       setRooms(JSON.parse(storedRooms));
@@ -93,6 +91,14 @@ export default function HomePage() {
       defaultRoomCreated = true;
     }
 
+    if (storedGroups) { // Load or create default group
+        setGroups(JSON.parse(storedGroups));
+    } else {
+        const defaultGroup: Group = { id: DEFAULT_GROUP_ID, name: "Unassigned" };
+        setGroups([defaultGroup]);
+        defaultGroupCreated = true;
+    }
+
     if (storedLaptops) {
       setLaptops(JSON.parse(storedLaptops));
     } else {
@@ -106,9 +112,9 @@ export default function HomePage() {
     if (storedStudents) {
         setStudents(JSON.parse(storedStudents));
     } else {
-        const mockStudents: Student[] = [
-            { id: "student-1", name: "Alice Wonderland", groupNumber: "CS101", roomId: DEFAULT_ROOM_ID },
-            { id: "student-2", name: "Bob The Builder", groupNumber: "ENG202", roomId: DEFAULT_ROOM_ID },
+        const mockStudents: Student[] = [ // Updated mock students with groupId
+            { id: "student-1", name: "Alice Wonderland", groupId: DEFAULT_GROUP_ID },
+            { id: "student-2", name: "Bob The Builder", groupId: DEFAULT_GROUP_ID },
         ];
         setStudents(mockStudents);
     }
@@ -154,10 +160,11 @@ export default function HomePage() {
     if (isAdminAuthenticated) {
       localStorage.setItem('rooms', JSON.stringify(rooms));
       localStorage.setItem('laptops', JSON.stringify(laptops));
-      localStorage.setItem('students', JSON.stringify(students)); // Still save students as they are read by this page
+      localStorage.setItem('students', JSON.stringify(students)); 
+      localStorage.setItem('groups', JSON.stringify(groups)); // Save groups
       if (currentRoomId) localStorage.setItem('currentRoomId', currentRoomId);
     }
-  }, [rooms, laptops, students, currentRoomId, isAdminAuthenticated]);
+  }, [rooms, laptops, students, groups, currentRoomId, isAdminAuthenticated]);
 
 
   const handleAdminLogin = (login: string, password_param: string) => {
@@ -209,8 +216,12 @@ export default function HomePage() {
   
   const confirmDeleteRoom = (roomIdToDelete: string) => {
      if (!isAdminAuthenticated) return;
+     // Laptops and students are no longer directly deleted with room, they are associated with room/group respectively
+     // Laptops belonging to this room should be marked as unassigned from any desk or student maybe?
+     // For now, just filter them out. This might orphan students if their only laptop was in this room.
      setLaptops(prevLaptops => prevLaptops.filter(lap => lap.roomId !== roomIdToDelete));
-     setStudents(prevStudents => prevStudents.filter(stu => stu.roomId !== roomIdToDelete));
+     // Students are group-based now, so deleting a room doesn't directly affect students unless a policy is set.
+     // setStudents(prevStudents => prevStudents.filter(stu => stu.roomId !== roomIdToDelete)); // This line removed
      setRooms(prevRooms => {
         const remainingRooms = prevRooms.filter(r => r.id !== roomIdToDelete);
         if (currentRoomId === roomIdToDelete) {
@@ -219,7 +230,7 @@ export default function HomePage() {
         return remainingRooms;
      });
      setItemToDelete(null);
-     toast({ title: "Room Deleted", description: "The room and its contents have been removed." });
+     toast({ title: "Room Deleted", description: "The room and its laptops have been removed." });
   }
 
   const handleAddOrUpdateLaptop = (formData: { login: string; password?: string }, laptopId?: string) => {
@@ -257,8 +268,6 @@ export default function HomePage() {
     setIsDeskActionModalOpen(false); 
   };
 
-  // handleAddOrUpdateStudent removed
-
   const confirmDeleteItem = () => {
     if (!isAdminAuthenticated || !itemToDelete) return;
     if (itemToDelete.type === 'laptop') {
@@ -274,7 +283,6 @@ export default function HomePage() {
     if (!isAdminAuthenticated) return;
     setItemToDelete({ type: 'laptop', id: laptopId });
   }
-  // handleDeleteStudent removed
 
   const handleDragStart = (event: DragEvent<HTMLDivElement>, laptopId: string) => {
     if (!isAdminAuthenticated) {
@@ -302,7 +310,6 @@ export default function HomePage() {
           return { ...lap, locationId: deskId, roomId: currentRoomId };
         }
         if (existingLaptopAtDesk && lap.id === existingLaptopAtDesk.id) {
-          // If dropping onto an occupied desk, swap the dropped laptop with the desk's current laptop
           return { ...lap, locationId: droppedLaptop.locationId, roomId: currentRoomId }; 
         }
         return lap;
@@ -312,19 +319,21 @@ export default function HomePage() {
   };
 
   const handleAssignStudentToLaptop = (laptopId: string, studentId: string) => {
-    if (!isAdminAuthenticated || !currentRoomId) return;
+    if (!isAdminAuthenticated || !currentRoomId) return; // currentRoomId check might be less relevant if assignment is global
     
     let newLaptops = [...laptops];
 
+    // Unassign the student from any OTHER laptop they might be on, globally
     newLaptops = newLaptops.map(otherLap => {
-      if (otherLap.studentId === studentId && otherLap.id !== laptopId && otherLap.roomId === currentRoomId) {
+      if (otherLap.studentId === studentId && otherLap.id !== laptopId) {
         return { ...otherLap, studentId: null };
       }
       return otherLap;
     });
 
+    // Assign student to the target laptop
     newLaptops = newLaptops.map(lap => {
-      if (lap.id === laptopId && lap.roomId === currentRoomId) {
+      if (lap.id === laptopId) { // Ensure it's the correct laptop, roomId check might be removed if truly global
         return { ...lap, studentId };
       }
       return lap;
@@ -340,7 +349,7 @@ export default function HomePage() {
   const handleUnassignStudentFromLaptop = (laptopId: string) => {
     if (!isAdminAuthenticated || !currentRoomId) return;
     setLaptops(laps => laps.map(lap => {
-      if (lap.id === laptopId && lap.roomId === currentRoomId) {
+      if (lap.id === laptopId && lap.roomId === currentRoomId) { // Keep roomId check for unassignment target
         return { ...lap, studentId: null };
       }
       return lap;
@@ -366,8 +375,9 @@ export default function HomePage() {
     if (!desk) return;
 
     const laptopOnDesk = laptops.find(l => l.roomId === currentRoom.id && l.locationId === deskId);
+    // Student data for display: student is globally identified by studentId
     const studentAssigned = laptopOnDesk && laptopOnDesk.studentId
-      ? students.find(s => s.id === laptopOnDesk.studentId && s.roomId === currentRoom.id)
+      ? students.find(s => s.id === laptopOnDesk.studentId) 
       : undefined;
 
     setCurrentActionDesk({ desk, laptop: laptopOnDesk, student: studentAssigned });
@@ -436,9 +446,13 @@ export default function HomePage() {
   }
 
   const laptopsInCurrentRoom = laptops.filter(lap => lap.roomId === currentRoomId);
-  const studentsInCurrentRoom = students.filter(stu => stu.roomId === currentRoomId); // Still needed for display
+  // Students assigned to laptops IN THE CURRENT ROOM
+  const studentsAssignedInCurrentRoom = students.filter(stu => 
+    laptopsInCurrentRoom.some(lap => lap.studentId === stu.id)
+  );
   const unassignedLaptopsInCurrentRoom = laptopsInCurrentRoom.filter(lap => !lap.locationId);
   const assignedLaptopsInCurrentRoom = laptopsInCurrentRoom.filter(lap => lap.locationId !== null);
+
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -451,8 +465,8 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
              <Button asChild variant="outline">
               <Link href="/admin/students">
-                <Users className="mr-2 h-4 w-4" />
-                Manage Students
+                <Package className="mr-2 h-4 w-4" /> {/* Changed Icon */}
+                Manage Groups & Students
               </Link>
             </Button>
             <Button asChild variant="outline">
@@ -498,7 +512,8 @@ export default function HomePage() {
               <ClassroomLayout
                 desks={desks}
                 laptops={assignedLaptopsInCurrentRoom}
-                students={studentsInCurrentRoom} // Pass students for display
+                students={students} // Pass all students; layout component can find assigned ones by ID
+                groups={groups} // Pass groups for display if needed
                 onDropLaptopOnDesk={handleDropLaptopOnDesk}
                 onDeskClick={(deskId) => handleOpenDeskActionModal(deskId)}
                 rows={currentRoom.rows}
@@ -605,7 +620,8 @@ export default function HomePage() {
                     <LaptopItem
                       key={laptop.id}
                       laptop={laptop}
-                      assignedStudent={studentsInCurrentRoom.find(s => s.id === laptop.studentId)}
+                      assignedStudent={students.find(s => s.id === laptop.studentId)} // Find from all students
+                      groups={groups} // Pass groups for student group name lookup
                       isDraggable={true}
                       onDragStart={handleDragStart}
                       onEdit={() => { setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
@@ -620,7 +636,8 @@ export default function HomePage() {
                     <LaptopItem
                       key={laptop.id}
                       laptop={laptop}
-                      assignedStudent={studentsInCurrentRoom.find(s => s.id === laptop.studentId)}
+                      assignedStudent={students.find(s => s.id === laptop.studentId)} // Find from all students
+                      groups={groups} // Pass groups for student group name lookup
                       isDraggable={true}
                       onDragStart={handleDragStart}
                       onEdit={() => { setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
@@ -635,9 +652,6 @@ export default function HomePage() {
                 </ScrollArea>
               </CardContent>
             </Card>
-
-            {/* Student Management Card Removed */}
-
           </div>
         </div>
       </main>
@@ -667,15 +681,13 @@ export default function HomePage() {
         onSubmit={handleAddOrUpdateLaptop}
         initialData={editingLaptop}
       />
-      {/* StudentFormDialog no longer instantiated here */}
       <AssignStudentDialog
         open={isAssignStudentOpen}
         onOpenChange={setIsAssignStudentOpen}
         laptop={laptopToAssign}
-        students={studentsInCurrentRoom.filter(s => 
-            !laptopsInCurrentRoom.some(l => l.studentId === s.id && l.id !== laptopToAssign?.id)
-        )}
-        laptops={laptopsInCurrentRoom} 
+        students={students} // Pass all students
+        groups={groups} // Pass all groups
+        laptops={laptops} 
         onAssign={handleAssignStudentToLaptop}
         isAdminAuthenticated={isAdminAuthenticated}
       />
@@ -698,6 +710,7 @@ export default function HomePage() {
             setEditingLaptop(undefined); 
             setIsLaptopFormOpen(true); 
         }}
+        groups={groups} // Pass groups for student display in modal
         isAdminAuthenticated={isAdminAuthenticated}
       />
       {itemToDelete && (
@@ -707,7 +720,7 @@ export default function HomePage() {
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
                 This action cannot be undone. This will permanently delete the {itemToDelete.type}
-                {itemToDelete.type === 'room' && ' and all associated laptops and students'}.
+                {itemToDelete.type === 'room' && ' and all laptops within it'}.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -720,5 +733,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    

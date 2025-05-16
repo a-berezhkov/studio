@@ -1,13 +1,14 @@
 
 "use client";
 
-import type { Laptop, Student, Desk } from "@/lib/types";
+import type { Laptop, Student, Desk, Group } from "@/lib/types"; // Added Group
 import { DeskCell } from "@/components/desk-cell";
 
 interface ClassroomLayoutProps {
   desks: Desk[]; 
   laptops: Laptop[];
   students: Student[];
+  groups: Group[]; // Added groups
   onDropLaptopOnDesk: (deskId: number, laptopId: string) => void;
   onDeskClick: (deskId: number, laptop: Laptop | undefined) => void;
   rows: number; 
@@ -28,6 +29,7 @@ export function ClassroomLayout({
   desks,
   laptops,
   students,
+  groups, // Added groups
   onDropLaptopOnDesk,
   onDeskClick,
   rows,
@@ -45,6 +47,11 @@ export function ClassroomLayout({
     if (!laptop || !laptop.studentId) return undefined;
     return students.find((student) => student.id === laptop.studentId);
   };
+
+  const getGroupForStudent = (student: Student | undefined): Group | undefined => {
+    if (!student || !student.groupId) return undefined;
+    return groups.find((group) => group.id === student.groupId);
+  }
 
   const gridCells: JSX.Element[] = [];
   let deskIndex = 0;
@@ -67,6 +74,7 @@ export function ClassroomLayout({
 
       const laptopOnDesk = getLaptopAtDesk(currentDesk.id);
       const studentAssigned = getStudentForLaptop(laptopOnDesk);
+      const groupOfStudent = getGroupForStudent(studentAssigned);
       
       currentRowVisualCells.push(
         <DeskCell
@@ -74,6 +82,7 @@ export function ClassroomLayout({
           desk={currentDesk}
           laptop={laptopOnDesk}
           student={studentAssigned}
+          group={groupOfStudent} // Pass group
           onDrop={(laptopId) => {
             if (isAdminAuthenticated) onDropLaptopOnDesk(currentDesk.id, laptopId);
           }}
@@ -110,5 +119,3 @@ export function ClassroomLayout({
     </div>
   );
 }
-
-    

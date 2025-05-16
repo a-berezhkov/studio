@@ -4,7 +4,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import type { Student } from "@/lib/types";
+import type { Student, Group } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,11 +23,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect } from "react";
 
 const studentFormSchema = z.object({
   name: z.string().min(1, { message: "Student name is required." }),
-  groupNumber: z.string().min(1, { message: "Group number is required." }),
+  groupId: z.string().min(1, { message: "Group is required." }),
 });
 
 type StudentFormValues = z.infer<typeof studentFormSchema>;
@@ -37,21 +38,24 @@ interface StudentFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: StudentFormValues, studentId?: string) => void;
   initialData?: Student;
+  groups: Group[]; // Added groups prop
 }
 
-export function StudentFormDialog({ open, onOpenChange, onSubmit, initialData }: StudentFormDialogProps) {
+export function StudentFormDialog({ open, onOpenChange, onSubmit, initialData, groups }: StudentFormDialogProps) {
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
-    defaultValues: initialData || { name: "", groupNumber: "" },
+    defaultValues: initialData ? { name: initialData.name, groupId: initialData.groupId } : { name: "", groupId: groups[0]?.id || "" },
   });
 
  useEffect(() => {
-    if (initialData) {
-      form.reset(initialData);
-    } else {
-      form.reset({ name: "", groupNumber: "" });
+    if (open) {
+        if (initialData) {
+          form.reset({ name: initialData.name, groupId: initialData.groupId });
+        } else {
+          form.reset({ name: "", groupId: groups[0]?.id || "" });
+        }
     }
-  }, [initialData, form, open]);
+  }, [initialData, groups, form, open]);
 
   const handleSubmit = (data: StudentFormValues) => {
     onSubmit(data, initialData?.id);
@@ -64,7 +68,7 @@ export function StudentFormDialog({ open, onOpenChange, onSubmit, initialData }:
         <DialogHeader>
           <DialogTitle>{initialData ? "Edit Student" : "Add New Student"}</DialogTitle>
           <DialogDescription>
-            {initialData ? "Update the student's details." : "Enter the name and group number for the new student."}
+            {initialData ? "Update the student's details and group." : "Enter the name and assign a group for the new student."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -84,20 +88,32 @@ export function StudentFormDialog({ open, onOpenChange, onSubmit, initialData }:
             />
             <FormField
               control={form.control}
-              name="groupNumber"
+              name="groupId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Group Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., CS101, Group A" {...field} />
-                  </FormControl>
+                  <FormLabel>Group</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger disabled={groups.length === 0}>
+                        <SelectValue placeholder="Select a group" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {groups.length === 0 && <SelectItem value="" disabled>No groups available. Please add a group first.</SelectItem>}
+                      {groups.map(group => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit">{initialData ? "Save Changes" : "Add Student"}</Button>
+              <Button type="submit" disabled={groups.length === 0}>{initialData ? "Save Changes" : "Add Student"}</Button>
             </DialogFooter>
           </form>
         </Form>

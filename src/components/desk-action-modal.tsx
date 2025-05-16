@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Laptop, Student, Desk } from "@/lib/types";
+import type { Laptop, Student, Desk, Group } from "@/lib/types"; // Added Group
 import type { DeskActionData } from "@/app/page"; 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
-import { Laptop as LaptopIcon, User, Edit, KeyRound, StickyNote, PlusCircle, UserMinus } from "lucide-react";
+import { Laptop as LaptopIcon, User, Edit, KeyRound, StickyNote, PlusCircle, UserMinus, Package } from "lucide-react"; // Added Package
 
 interface DeskActionModalProps {
   open: boolean;
@@ -29,6 +29,7 @@ interface DeskActionModalProps {
   onUnassignStudent: (laptopId: string) => void;
   onSaveNotes: (laptopId: string, notes: string) => void;
   onAddLaptopToDesk: (desk: Desk) => void;
+  groups: Group[]; // Added groups
   isAdminAuthenticated: boolean;
 }
 
@@ -42,6 +43,7 @@ export function DeskActionModal({
   onUnassignStudent,
   onSaveNotes,
   onAddLaptopToDesk,
+  groups, // Added groups
   isAdminAuthenticated,
 }: DeskActionModalProps) {
   const [currentNotes, setCurrentNotes] = useState("");
@@ -57,6 +59,7 @@ export function DeskActionModal({
   if (!deskActionData) return null;
 
   const { desk, laptop, student } = deskActionData;
+  const studentGroup = student ? groups.find(g => g.id === student.groupId) : undefined;
 
   const handleSaveNotes = () => {
     if (laptop && isAdminAuthenticated) {
@@ -72,7 +75,7 @@ export function DeskActionModal({
           {laptop ? (
             <DialogDescription>
               Manage laptop <span className="font-semibold">{laptop.login}</span>
-              {student ? ` assigned to ${student.name}.` : "."}
+              {student ? ` assigned to ${student.name}${studentGroup ? ` (Group: ${studentGroup.name})` : ''}.` : "."}
             </DialogDescription>
           ) : (
             <DialogDescription>This desk is currently empty.</DialogDescription>
@@ -104,7 +107,8 @@ export function DeskActionModal({
                 </h3>
                 {student ? (
                   <div className="space-y-2">
-                     <p className="text-sm">Assigned to: <span className="font-semibold">{student.name}</span> ({student.groupNumber})</p>
+                     <p className="text-sm">Assigned to: <span className="font-semibold">{student.name}</span></p>
+                     {studentGroup && <p className="text-xs text-muted-foreground flex items-center"><Package className="w-3 h-3 mr-1"/> Group: {studentGroup.name}</p>}
                     <div className="grid grid-cols-2 gap-2">
                         <Button variant="outline" onClick={() => onAssignStudent(laptop)} disabled={!isAdminAuthenticated}>
                             <User className="mr-2 h-4 w-4" /> Change Student
@@ -160,5 +164,3 @@ export function DeskActionModal({
     </Dialog>
   );
 }
-
-    
