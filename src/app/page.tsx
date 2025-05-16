@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, Edit3, Trash2, Eye, UserPlus, Users, Laptop as LaptopIconLucide, Home, Edit, LogIn, LogOut, ShieldAlert } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
 
 export type DeskActionData = {
   desk: Desk;
@@ -470,9 +471,17 @@ export default function HomePage() {
             <Home className="mr-2 h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold">Classroom Navigator {currentRoom ? `- ${currentRoom.name}` : ''}</h1>
           </div>
-          <Button onClick={handleAdminLogout} variant="outline">
-            <LogOut className="mr-2 h-4 w-4" /> Admin Logout
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline">
+              <Link href="/admin/users">
+                <Users className="mr-2 h-4 w-4" />
+                Manage Users
+              </Link>
+            </Button>
+            <Button onClick={handleAdminLogout} variant="outline">
+              <LogOut className="mr-2 h-4 w-4" /> Admin Logout
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -760,3 +769,4 @@ export default function HomePage() {
     </div>
   );
 }
+
