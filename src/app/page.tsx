@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, DragEvent } from "react";
+import { useState, useEffect, DragEvent, useCallback } from "react";
 import type { Laptop, Student, Desk } from "@/lib/types";
 import { ClassroomLayout } from "@/components/classroom-layout";
 import { LaptopItem } from "@/components/laptop-item";
@@ -10,6 +10,7 @@ import { LaptopFormDialog } from "@/components/laptop-form-dialog";
 import { StudentFormDialog } from "@/components/student-form-dialog";
 import { AssignStudentDialog } from "@/components/assign-student-dialog";
 import { ViewCredentialsDialog } from "@/components/view-credentials-dialog";
+import { DeskActionModal } from "@/components/desk-action-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,6 +23,12 @@ const CLASSROOM_ROWS = 5;
 const CLASSROOM_COLS = 6;
 const TOTAL_DESKS = CLASSROOM_ROWS * CLASSROOM_COLS;
 
+export type DeskActionData = {
+  desk: Desk;
+  laptop?: Laptop;
+  student?: Student;
+};
+
 export default function HomePage() {
   const [laptops, setLaptops] = useState<Laptop[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -29,6 +36,8 @@ export default function HomePage() {
 
   const [isLaptopFormOpen, setIsLaptopFormOpen] = useState(false);
   const [editingLaptop, setEditingLaptop] = useState<Laptop | undefined>(undefined);
+  const [laptopToCreateAtDesk, setLaptopToCreateAtDesk] = useState<Desk | null>(null);
+
 
   const [isStudentFormOpen, setIsStudentFormOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | undefined>(undefined);
@@ -40,20 +49,20 @@ export default function HomePage() {
   const [laptopToView, setLaptopToView] = useState<Laptop | null>(null);
   
   const [draggedLaptopId, setDraggedLaptopId] = useState<string | null>(null);
-
   const [itemToDelete, setItemToDelete] = useState<{ type: 'laptop' | 'student', id: string } | null>(null);
+
+  const [currentActionDesk, setCurrentActionDesk] = useState<DeskActionData | null>(null);
+  const [isDeskActionModalOpen, setIsDeskActionModalOpen] = useState(false);
 
 
   useEffect(() => {
-    // Initialize desks
     const initialDesks = Array.from({ length: TOTAL_DESKS }, (_, i) => ({ id: i + 1 }));
     setDesks(initialDesks);
 
-    // Load mock data or data from localStorage
     const mockLaptops: Laptop[] = [
-      { id: "laptop-1", login: "Room5-L01", password: "password1", locationId: 1, studentId: "student-1" },
-      { id: "laptop-2", login: "Room5-L02", password: "password2", locationId: 2, studentId: null },
-      { id: "laptop-3", login: "Room5-L03", password: "password3", locationId: null, studentId: null },
+      { id: "laptop-1", login: "Room5-L01", password: "password1", locationId: 1, studentId: "student-1", notes: "This is a note for laptop 1." },
+      { id: "laptop-2", login: "Room5-L02", password: "password2", locationId: 2, studentId: null, notes: "" },
+      { id: "laptop-3", login: "Room5-L03", password: "password3", locationId: null, studentId: null, notes: "Unassigned laptop note." },
     ];
     const mockStudents: Student[] = [
       { id: "student-1", name: "Alice Wonderland", groupNumber: "CS101" },
@@ -63,20 +72,36 @@ export default function HomePage() {
     setStudents(mockStudents);
   }, []);
 
-  const handleAddOrUpdateLaptop = (data: { login: string; password?: string }, laptopId?: string) => {
-    if (laptopId) {
-      setLaptops(laps => laps.map(lap => lap.id === laptopId ? { ...lap, ...data } : lap));
-    } else {
+  const handleAddOrUpdateLaptop = (formData: { login: string; password?: string }, laptopId?: string) => {
+    if (laptopId) { // Editing existing laptop
+      setLaptops(laps => laps.map(lap => {
+        if (lap.id === laptopId) {
+          const updatedLaptop = { ...lap, login: formData.login };
+          // If password string is provided (even empty), update it. If undefined, don't change.
+          if (typeof formData.password === 'string') {
+            updatedLaptop.password = formData.password;
+          }
+          return updatedLaptop;
+        }
+        return lap;
+      }));
+    } else { // Adding new laptop
       const newLaptop: Laptop = {
         id: `laptop-${Date.now()}`,
-        login: data.login,
-        password: data.password,
-        locationId: null,
+        login: formData.login,
+        password: formData.password || "", 
+        locationId: laptopToCreateAtDesk ? laptopToCreateAtDesk.id : null,
         studentId: null,
+        notes: "", // Initialize notes for new laptops
       };
       setLaptops(laps => [...laps, newLaptop]);
+      if (laptopToCreateAtDesk) {
+        setLaptopToCreateAtDesk(null); // Reset temp state
+      }
     }
     setEditingLaptop(undefined);
+    setIsLaptopFormOpen(false); // Ensure form dialog closes
+    setIsDeskActionModalOpen(false); // Close desk action modal if it was open
   };
 
   const handleAddOrUpdateStudent = (data: { name: string; groupNumber: string }, studentId?: string) => {
@@ -91,6 +116,8 @@ export default function HomePage() {
       setStudents(stus => [...stus, newStudent]);
     }
     setEditingStudent(undefined);
+    setIsStudentFormOpen(false);
+    // Potentially refresh desk action modal if student was assigned from there
   };
   
   const confirmDeleteItem = () => {
@@ -98,7 +125,6 @@ export default function HomePage() {
     if (itemToDelete.type === 'laptop') {
       setLaptops(laps => laps.filter(lap => lap.id !== itemToDelete.id));
     } else if (itemToDelete.type === 'student') {
-      // Unassign student from any laptop first
       setLaptops(laps => laps.map(lap => lap.studentId === itemToDelete.id ? { ...lap, studentId: null } : lap));
       setStudents(stus => stus.filter(stu => stu.id !== itemToDelete.id));
     }
@@ -116,21 +142,14 @@ export default function HomePage() {
 
   const handleDropLaptopOnDesk = (deskId: number, laptopIdToDrop: string) => {
     setLaptops(prevLaptops => {
-      // The laptop being dropped
       const droppedLaptop = prevLaptops.find(l => l.id === laptopIdToDrop);
       if (!droppedLaptop) return prevLaptops;
-
-      // Laptop currently at the target desk (if any)
       const existingLaptopAtDesk = prevLaptops.find(l => l.locationId === deskId);
 
       return prevLaptops.map(lap => {
-        // Update the dropped laptop
-        if (lap.id === laptopIdToDrop) {
-          return { ...lap, locationId: deskId };
-        }
-        // If there was another laptop at the target desk, unassign its location
+        if (lap.id === laptopIdToDrop) return { ...lap, locationId: deskId };
         if (existingLaptopAtDesk && lap.id === existingLaptopAtDesk.id && existingLaptopAtDesk.id !== laptopIdToDrop) {
-          return { ...lap, locationId: null }; // Or swap: droppedLaptop.locationId
+          return { ...lap, locationId: null };
         }
         return lap;
       });
@@ -139,34 +158,78 @@ export default function HomePage() {
   };
   
   const handleDeskClick = (deskId: number, laptopOnDesk: Laptop | undefined) => {
-    if (laptopOnDesk) {
-      setLaptopToAssign(laptopOnDesk);
-      // Potentially open a quick action menu here later or laptop details
-      // For now, clicking a desk with a laptop could open assign student dialog if needed.
-      // Or edit laptop details.
-      setEditingLaptop(laptopOnDesk);
-      // setIsLaptopFormOpen(true); // This would open edit form for laptop on desk
-    } else {
-      // Desk is empty, perhaps allow quick "add laptop here" in future
+    const desk = desks.find(d => d.id === deskId);
+    if (!desk) return;
+
+    let studentOnLaptop: Student | undefined = undefined;
+    if (laptopOnDesk && laptopOnDesk.studentId) {
+      studentOnLaptop = students.find(s => s.id === laptopOnDesk.studentId);
     }
+    setCurrentActionDesk({ desk, laptop: laptopOnDesk, student: studentOnLaptop });
+    setIsDeskActionModalOpen(true);
   };
 
   const handleAssignStudent = (laptopId: string, studentId: string) => {
     setLaptops(laps => laps.map(lap => {
       if (lap.id === laptopId) return { ...lap, studentId: studentId };
-      // Ensure student is unassigned from any other laptop
       if (lap.studentId === studentId && lap.id !== laptopId) return { ...lap, studentId: null };
       return lap;
     }));
+    // Refresh currentActionDesk if it's open and matches this laptop
+    if (currentActionDesk?.laptop?.id === laptopId) {
+        const updatedStudent = students.find(s => s.id === studentId);
+        setCurrentActionDesk(prev => prev ? {...prev, laptop: {...prev.laptop!, studentId: studentId}, student: updatedStudent} : null);
+    }
+    setIsAssignStudentOpen(false); // Close assign dialog
   };
   
   const handleUnassignStudent = (laptopId: string) => {
     setLaptops(laps => laps.map(lap => lap.id === laptopId ? { ...lap, studentId: null } : lap));
+     // Refresh currentActionDesk
+     if (currentActionDesk?.laptop?.id === laptopId) {
+        setCurrentActionDesk(prev => prev ? {...prev, laptop: {...prev.laptop!, studentId: null}, student: undefined} : null);
+    }
   };
 
   const handleUnassignLocation = (laptopId: string) => {
     setLaptops(laps => laps.map(lap => lap.id === laptopId ? { ...lap, locationId: null } : lap));
   };
+
+  const handleSaveLaptopNotes = (laptopId: string, notes: string) => {
+    setLaptops(laps => laps.map(lap => lap.id === laptopId ? { ...lap, notes } : lap));
+    if (currentActionDesk?.laptop?.id === laptopId) {
+        setCurrentActionDesk(prev => prev ? {...prev, laptop: {...prev.laptop!, notes: notes}} : null);
+    }
+    // Optionally close DeskActionModal or show a toast
+  };
+  
+  // Callbacks for DeskActionModal
+  const openEditLaptopDialog = useCallback((laptop: Laptop) => {
+    setEditingLaptop(laptop);
+    setIsLaptopFormOpen(true);
+    setIsDeskActionModalOpen(false);
+  }, []);
+
+  const openViewCredentialsDialog = useCallback((laptop: Laptop) => {
+    setLaptopToView(laptop);
+    setIsViewCredentialsOpen(true);
+    setIsDeskActionModalOpen(false);
+  }, []);
+
+  const openAssignStudentDialog = useCallback((laptop: Laptop) => {
+    setLaptopToAssign(laptop);
+    setIsAssignStudentOpen(true);
+    // Keep DeskActionModal open or close? For now, let it manage its own closure or stay open.
+    // setIsDeskActionModalOpen(false); 
+  }, []);
+
+  const requestAddLaptopToDesk = useCallback((desk: Desk) => {
+    setLaptopToCreateAtDesk(desk);
+    setEditingLaptop(undefined); // Ensure we are in "add" mode
+    setIsLaptopFormOpen(true);
+    setIsDeskActionModalOpen(false);
+  }, []);
+
 
   const unassignedLaptops = laptops.filter(lap => lap.locationId === null);
   const assignedLaptops = laptops.filter(lap => lap.locationId !== null);
@@ -191,12 +254,11 @@ export default function HomePage() {
         </section>
 
         <aside className="lg:col-span-1 space-y-6">
-          {/* Laptops Management */}
           <Card className="shadow-lg">
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle className="text-xl flex items-center"><LaptopIconLucide className="mr-2 h-6 w-6 text-primary" />Laptops</CardTitle>
-                <Button size="sm" onClick={() => { setEditingLaptop(undefined); setIsLaptopFormOpen(true); }}>
+                <Button size="sm" onClick={() => { setLaptopToCreateAtDesk(null); setEditingLaptop(undefined); setIsLaptopFormOpen(true); }}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Laptop
                 </Button>
               </div>
@@ -211,7 +273,7 @@ export default function HomePage() {
                     laptop={laptop}
                     isDraggable={true}
                     onDragStart={handleDragStart}
-                    onEdit={() => { setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
+                    onEdit={() => { setLaptopToCreateAtDesk(null); setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
                     onDelete={() => handleDeleteLaptop(laptop.id)}
                     onViewCredentials={() => { setLaptopToView(laptop); setIsViewCredentialsOpen(true); }}
                     onAssignStudent={() => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true);}}
@@ -230,7 +292,7 @@ export default function HomePage() {
                         assignedStudent={student}
                         isDraggable={true}
                         onDragStart={handleDragStart}
-                        onEdit={() => { setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
+                        onEdit={() => { setLaptopToCreateAtDesk(null); setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
                         onDelete={() => handleDeleteLaptop(laptop.id)}
                         onViewCredentials={() => { setLaptopToView(laptop); setIsViewCredentialsOpen(true); }}
                         onAssignStudent={() => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true);}}
@@ -243,7 +305,6 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          {/* Students Management */}
           <Card className="shadow-lg">
             <CardHeader>
                <div className="flex justify-between items-center">
@@ -274,7 +335,6 @@ export default function HomePage() {
         </aside>
       </main>
 
-      {/* Dialogs */}
       <LaptopFormDialog
         open={isLaptopFormOpen}
         onOpenChange={setIsLaptopFormOpen}
@@ -287,19 +347,30 @@ export default function HomePage() {
         onSubmit={handleAddOrUpdateStudent}
         initialData={editingStudent}
       />
-      <AssignStudentDialog
+      {laptopToAssign && <AssignStudentDialog
         open={isAssignStudentOpen}
         onOpenChange={setIsAssignStudentOpen}
         laptop={laptopToAssign}
         students={students}
         laptops={laptops}
         onAssign={handleAssignStudent}
-      />
-      <ViewCredentialsDialog
+      />}
+      {laptopToView && <ViewCredentialsDialog
         open={isViewCredentialsOpen}
         onOpenChange={setIsViewCredentialsOpen}
         laptop={laptopToView}
-      />
+      />}
+      {currentActionDesk && <DeskActionModal
+        open={isDeskActionModalOpen}
+        onOpenChange={setIsDeskActionModalOpen}
+        deskActionData={currentActionDesk}
+        onEditLaptop={openEditLaptopDialog}
+        onViewCredentials={openViewCredentialsDialog}
+        onAssignStudent={openAssignStudentDialog}
+        onUnassignStudent={handleUnassignStudent}
+        onSaveNotes={handleSaveLaptopNotes}
+        onAddLaptopToDesk={requestAddLaptopToDesk}
+      />}
       <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

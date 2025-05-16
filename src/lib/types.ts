@@ -5,6 +5,7 @@ export interface Laptop {
   password?: string; // Password might be sensitive, consider how to handle
   locationId: number | null; // Corresponds to Desk ID
   studentId: string | null; // Corresponds to Student ID
+  notes?: string; // Notes for the laptop
 }
 
 export interface Student {
