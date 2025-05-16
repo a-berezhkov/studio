@@ -186,7 +186,7 @@ export default function HomePage() {
     } else {
       setDesks([]);
     }
-  }, [currentRoomId, rooms, currentRoom?.rows, currentRoom?.cols]);
+  }, [currentRoomId, rooms, currentRoom?.rows, currentRoom?.cols]); // currentRoom dependency ensures re-run if rows/cols change
 
   useEffect(() => {
     if (isAdminAuthenticated) { 
@@ -263,8 +263,9 @@ export default function HomePage() {
      toast({ title: "Кабинет удален", description: "Кабинет и все ноутбуки в нем были удалены." });
   }
 
-  const handleAddOrUpdateLaptop = (formData: { login: string; password?: string }, laptopId?: string) => {
+  const handleAddOrUpdateLaptop = (formData: { login: string; password?: string; roomId: string }, laptopId?: string) => {
     if (!isAdminAuthenticated || !currentRoomId) return;
+    // roomId from formData is used here as LaptopFormDialog now handles room context
     if (laptopId) { 
       setLaptops(laps => laps.map(lap => {
         if (lap.id === laptopId) {
@@ -274,6 +275,7 @@ export default function HomePage() {
           } else if (formData.password === "" && typeof lap.password === 'string') { 
             updatedLaptop.password = ""; 
           }
+          // Room is not changed via edit on this page
           return updatedLaptop;
         }
         return lap;
@@ -286,7 +288,7 @@ export default function HomePage() {
         locationId: laptopToCreateAtDesk ? laptopToCreateAtDesk.id : null,
         studentIds: [], 
         notes: "", 
-        roomId: currentRoomId,
+        roomId: formData.roomId, // Use roomId from formData (which will be currentRoomId due to fixedRoomId)
       };
       setLaptops(laps => [...laps, newLaptop]);
       if (laptopToCreateAtDesk) {
@@ -421,13 +423,13 @@ export default function HomePage() {
   const handleSaveNotes = (laptopId: string, notes: string) => {
     if (!isAdminAuthenticated || !currentRoomId) return;
     setLaptops(laps => laps.map(lap => {
-      if (lap.id === laptopId && lap.roomId === currentRoomId) {
+      if (lap.id === laptopId && lap.roomId === currentRoomId) { // Ensure notes are saved for laptop in current room context
         return { ...lap, notes };
       }
       return lap;
     }));
     toast({ title: "Заметки сохранены", description: "Заметки для ноутбука обновлены." });
-    if (currentActionDesk?.laptop?.id === laptopId) {
+    if (currentActionDesk?.laptop?.id === laptopId && currentActionDesk?.laptop.roomId === currentRoomId) {
         setCurrentActionDesk(prev => prev ? {...prev, laptop: {...prev.laptop!, notes}} : null);
     }
   };
@@ -708,16 +710,26 @@ export default function HomePage() {
       />
       <RoomFormDialog
         open={isRoomFormOpen}
-        onOpenChange={setIsRoomFormOpen}
+        onOpenChange={(isOpen) => {
+            setIsRoomFormOpen(isOpen);
+            if (!isOpen) setEditingRoom(undefined); 
+        }}
         onSubmit={handleAddOrUpdateRoom}
         initialData={editingRoom}
         allGroups={groups}
       />
       <LaptopFormDialog
         open={isLaptopFormOpen}
-        onOpenChange={setIsLaptopFormOpen}
+        onOpenChange={(isOpen) => {
+            setIsLaptopFormOpen(isOpen);
+            if (!isOpen) {
+                setEditingLaptop(undefined);
+                setLaptopToCreateAtDesk(null);
+            }
+        }}
         onSubmit={handleAddOrUpdateLaptop}
         initialData={editingLaptop}
+        fixedRoomId={currentRoomId || undefined} // For main page, new laptops are in current room
       />
       <AssignStudentDialog
         open={isAssignStudentOpen}

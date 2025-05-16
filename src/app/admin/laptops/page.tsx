@@ -13,7 +13,7 @@ import { AssignStudentDialog } from "@/components/assign-student-dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { ArrowLeft, Search, ListChecks } from "lucide-react";
+import { ArrowLeft, Search, ListChecks, PlusCircle } from "lucide-react";
 
 export default function AdminAllLaptopsPage() {
   const { toast } = useToast();
@@ -86,32 +86,45 @@ export default function AdminAllLaptopsPage() {
     setFilteredLaptops(results);
   }, [searchTerm, allLaptops]);
 
-  const handleAddOrUpdateLaptop = (formData: { login: string; password?: string; notes?: string }, laptopId?: string) => {
+  const handleAddOrUpdateLaptop = (formData: { login: string; password?: string; roomId: string; }, laptopId?: string) => {
     let updatedLaptops;
-    if (laptopId) {
+    if (laptopId) { // Editing existing laptop
       updatedLaptops = allLaptops.map(lap => {
         if (lap.id === laptopId) {
-          const updatedLaptopData = { ...lap, login: formData.login, notes: formData.notes || lap.notes || "" };
+          const updatedLaptopData = { ...lap, login: formData.login, notes: lap.notes || "" };
+          // Password update logic
           if (typeof formData.password === 'string' && formData.password.length > 0) {
             updatedLaptopData.password = formData.password;
-          } else if (formData.password === "" && typeof lap.password === 'string') {
+          } else if (formData.password === "" && typeof lap.password === 'string') { 
+            // If password field is explicitly cleared, clear the password
             updatedLaptopData.password = "";
           }
+          // RoomId is not changed during edit from this page for simplicity
           return updatedLaptopData;
         }
         return lap;
       });
-    } else {
-      // Adding new laptop is generally done via main page with room context.
-      // This page focuses on managing existing ones. Could be added if a default room is chosen or roomId is part of form.
-      toast({ title: "Функция не реализована", description: "Добавление новых ноутбуков производится на главной странице в контексте кабинета.", variant: "default" });
-      setIsLaptopFormOpen(false);
-      return;
+      toast({ title: "Ноутбук обновлен", description: `Ноутбук "${formData.login}" был обновлен.` });
+    } else { // Adding new laptop
+      if (!formData.roomId) {
+        toast({ title: "Ошибка", description: "Необходимо выбрать кабинет для нового ноутбука.", variant: "destructive" });
+        return;
+      }
+      const newLaptop: Laptop = {
+        id: `laptop-${Date.now()}`,
+        login: formData.login,
+        password: formData.password || "",
+        roomId: formData.roomId,
+        locationId: null, // New laptops from this page are unassigned to a desk initially
+        studentIds: [],
+        notes: "",
+      };
+      updatedLaptops = [...allLaptops, newLaptop];
+      toast({ title: "Ноутбук добавлен", description: `Ноутбук "${formData.login}" был добавлен.` });
     }
     setAllLaptops(updatedLaptops);
     setEditingLaptop(undefined);
     setIsLaptopFormOpen(false);
-    toast({ title: laptopId ? "Ноутбук обновлен" : "Ноутбук добавлен", description: `Ноутбук "${formData.login}" был ${laptopId ? 'обновлен' : 'добавлен'}.` });
   };
   
   const handleOpenDeleteDialog = (laptop: Laptop) => {
@@ -166,8 +179,22 @@ export default function AdminAllLaptopsPage() {
       <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8">
         <Card className="shadow-md">
           <CardHeader>
-            <CardTitle>Список всех ноутбуков</CardTitle>
-            <CardDescription>Просмотр, поиск и управление всеми ноутбуками в системе.</CardDescription>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div>
+                <CardTitle>Список всех ноутбуков</CardTitle>
+                <CardDescription>Просмотр, поиск и управление всеми ноутбуками в системе.</CardDescription>
+              </div>
+              <Button 
+                onClick={() => { setEditingLaptop(undefined); setIsLaptopFormOpen(true); }}
+                disabled={allRooms.length === 0}
+                className="w-full sm:w-auto"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" /> Добавить ноутбук
+              </Button>
+            </div>
+             {allRooms.length === 0 && (
+                <p className="text-sm text-destructive mt-2">Для добавления ноутбука необходимо сначала <Link href="/" className="underline">создать хотя бы один кабинет</Link>.</p>
+            )}
             <div className="relative mt-4">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -184,8 +211,8 @@ export default function AdminAllLaptopsPage() {
             {allLaptops.length > 0 && filteredLaptops.length === 0 && searchTerm && (
                 <p className="text-sm text-muted-foreground text-center py-8">Ноутбуки с логином "{searchTerm}" не найдены.</p>
             )}
-            <ScrollArea className="h-[calc(100vh-350px)] md:min-h-[400px] pr-2 sm:pr-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <ScrollArea className="h-[calc(100vh-380px)] md:min-h-[400px] pr-2 sm:pr-3"> {/* Adjusted height */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"> {/* Added xl for more columns */}
                 {filteredLaptops.map(laptop => (
                   <AdminLaptopListItem
                     key={laptop.id}
@@ -215,9 +242,13 @@ export default function AdminAllLaptopsPage() {
 
       <LaptopFormDialog
         open={isLaptopFormOpen}
-        onOpenChange={setIsLaptopFormOpen}
+        onOpenChange={(isOpen) => {
+            setIsLaptopFormOpen(isOpen);
+            if (!isOpen) setEditingLaptop(undefined); // Clear editing state when dialog closes
+        }}
         onSubmit={handleAddOrUpdateLaptop}
         initialData={editingLaptop}
+        availableRooms={allRooms} // Pass all rooms for selection when adding
       />
       <AssignStudentDialog
         open={isAssignStudentOpen}
@@ -251,3 +282,4 @@ export default function AdminAllLaptopsPage() {
     </div>
   );
 }
+
