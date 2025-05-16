@@ -8,7 +8,7 @@ import { LaptopItem } from "@/components/laptop-item";
 import { StudentItem } from "@/components/student-item";
 import { LaptopFormDialog } from "@/components/laptop-form-dialog";
 import { StudentFormDialog } from "@/components/student-form-dialog";
-import { RoomFormDialog } from "@/components/room-form-dialog";
+import { RoomFormDialog, type RoomSubmitData } from "@/components/room-form-dialog";
 import { AssignStudentDialog } from "@/components/assign-student-dialog";
 import { ViewCredentialsDialog } from "@/components/view-credentials-dialog";
 import { DeskActionModal } from "@/components/desk-action-modal";
@@ -35,7 +35,7 @@ export default function HomePage() {
   
   const [laptops, setLaptops] = useState<Laptop[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  const [desks, setDesks] = useState<Desk[]>([]); // Represents actual desks, not visual grid cells
+  const [desks, setDesks] = useState<Desk[]>([]);
 
   const [isLaptopFormOpen, setIsLaptopFormOpen] = useState(false);
   const [editingLaptop, setEditingLaptop] = useState<Laptop | undefined>(undefined);
@@ -68,8 +68,8 @@ export default function HomePage() {
         name: "Main Classroom", 
         rows: 5, 
         cols: 6,
-        rowGap: 0,
-        colGap: 0,
+        corridorsAfterRows: [],
+        corridorsAfterCols: [],
       };
       setRooms([defaultRoom]);
       setCurrentRoomId(defaultRoom.id);
@@ -94,6 +94,7 @@ export default function HomePage() {
     if (currentRoom) {
       const newDesks = Array.from({ length: currentRoom.rows * currentRoom.cols }, (_, i) => ({ id: i + 1 }));
       setDesks(newDesks);
+      // Reset laptop locations if they become invalid due to room dimension changes
       setLaptops(prevLaptops => prevLaptops.map(lap => {
         if (lap.roomId === currentRoom.id && lap.locationId && lap.locationId > newDesks.length) {
           return { ...lap, locationId: null }; 
@@ -103,23 +104,24 @@ export default function HomePage() {
     } else {
       setDesks([]);
     }
-  }, [currentRoomId, rooms]);
+  }, [currentRoomId, rooms, currentRoom?.rows, currentRoom?.cols]); // Added currentRoom.rows/cols dependencies
 
 
-  const handleAddOrUpdateRoom = (data: { name: string; rows: number; cols: number; rowGap?: number; colGap?: number }, roomId?: string) => {
-    const roomData = {
+  const handleAddOrUpdateRoom = (data: RoomSubmitData, roomId?: string) => {
+    const roomData: Omit<Room, 'id'> = {
       name: data.name,
       rows: data.rows,
       cols: data.cols,
-      rowGap: data.rowGap ?? 0,
-      colGap: data.colGap ?? 0,
+      corridorsAfterRows: data.corridorsAfterRows || [],
+      corridorsAfterCols: data.corridorsAfterCols || [],
     };
     if (roomId) {
       setRooms(prevRooms => prevRooms.map(r => r.id === roomId ? { ...r, ...roomData } : r));
     } else {
-      const newRoom: Room = { id: `room-${Date.now()}`, ...roomData };
+      const newRoomId = `room-${Date.now()}`;
+      const newRoom: Room = { id: newRoomId, ...roomData };
       setRooms(prevRooms => [...prevRooms, newRoom]);
-      setCurrentRoomId(newRoom.id); 
+      setCurrentRoomId(newRoomId); 
     }
     setEditingRoom(undefined);
     setIsRoomFormOpen(false);
@@ -127,6 +129,7 @@ export default function HomePage() {
 
   const handleDeleteRoom = (roomIdToDelete: string) => {
     if (rooms.length <= 1) {
+      // Potentially show a toast or alert here
       console.warn("Cannot delete the last room.");
       setItemToDelete(null);
       return;
@@ -137,11 +140,13 @@ export default function HomePage() {
   const confirmDeleteRoom = (roomIdToDelete: string) => {
      setLaptops(prevLaptops => prevLaptops.filter(lap => lap.roomId !== roomIdToDelete));
      setStudents(prevStudents => prevStudents.filter(stu => stu.roomId !== roomIdToDelete));
-     setRooms(prevRooms => prevRooms.filter(r => r.id !== roomIdToDelete));
-
-     if (currentRoomId === roomIdToDelete) {
-       setCurrentRoomId(rooms.find(r => r.id !== roomIdToDelete)?.id || null);
-     }
+     setRooms(prevRooms => {
+        const remainingRooms = prevRooms.filter(r => r.id !== roomIdToDelete);
+        if (currentRoomId === roomIdToDelete) {
+            setCurrentRoomId(remainingRooms[0]?.id || null);
+        }
+        return remainingRooms;
+     });
      setItemToDelete(null);
   }
 
@@ -151,7 +156,7 @@ export default function HomePage() {
       setLaptops(laps => laps.map(lap => {
         if (lap.id === laptopId) {
           const updatedLaptop = { ...lap, login: formData.login };
-          if (typeof formData.password === 'string') { // Only update password if provided (even if empty string)
+          if (typeof formData.password === 'string') {
             updatedLaptop.password = formData.password;
           }
           return updatedLaptop;
@@ -165,7 +170,7 @@ export default function HomePage() {
         password: formData.password || "", 
         locationId: laptopToCreateAtDesk ? laptopToCreateAtDesk.id : null,
         studentId: null,
-        notes: "", // Initialize notes
+        notes: "",
         roomId: currentRoomId,
       };
       setLaptops(laps => [...laps, newLaptop]);
@@ -181,7 +186,7 @@ export default function HomePage() {
   const handleAddOrUpdateStudent = (data: { name: string; groupNumber: string }, studentId?: string) => {
     if (!currentRoomId) return;
     if (studentId) {
-      setStudents(stus => stus.map(stu => stu.id === studentId ? { ...stu, ...data } : stu));
+      setStudents(stus => stus.map(stu => stu.id === studentId ? { ...stu, ...data, roomId: currentRoomId } : stu));
     } else {
       const newStudent: Student = {
         id: `student-${Date.now()}`,
@@ -228,6 +233,7 @@ export default function HomePage() {
         if (lap.roomId !== currentRoomId) return lap;
 
         if (lap.id === laptopIdToDrop) return { ...lap, locationId: deskId };
+        // If a laptop was already at the target desk, and it's not the one being dropped, unassign its location.
         if (existingLaptopAtDesk && lap.id === existingLaptopAtDesk.id && existingLaptopAtDesk.id !== laptopIdToDrop) {
           return { ...lap, locationId: null }; 
         }
@@ -238,7 +244,6 @@ export default function HomePage() {
   };
   
   const handleDeskClick = (deskId: number) => {
-    // deskId is the original ID (1 to rows*cols)
     const desk = desks.find(d => d.id === deskId);
     if (!desk || !currentRoomId) return;
 
@@ -256,7 +261,9 @@ export default function HomePage() {
     setLaptops(laps => laps.map(lap => {
       if (lap.roomId !== currentRoomId) return lap;
 
+      // Assign student to the target laptop
       if (lap.id === laptopId) return { ...lap, studentId: studentId };
+      // If this student was assigned to another laptop, unassign them from that other laptop
       if (lap.studentId === studentId && lap.id !== laptopId) return { ...lap, studentId: null };
       return lap;
     }));
@@ -301,7 +308,6 @@ export default function HomePage() {
   const openAssignStudentDialog = useCallback((laptop: Laptop) => {
     setLaptopToAssign(laptop);
     setIsAssignStudentOpen(true);
-    // setIsDeskActionModalOpen(false); // Keep desk action modal open in background or close? User preference. For now, let it stay.
   }, []);
 
   const requestAddLaptopToDesk = useCallback((desk: Desk) => {
@@ -330,15 +336,15 @@ export default function HomePage() {
         <section className="lg:col-span-2">
           {currentRoom ? (
             <ClassroomLayout
-              desks={desks} // Pass the actual desks
+              desks={desks}
               laptops={laptopsInCurrentRoom}
               students={studentsInCurrentRoom}
               onDropLaptopOnDesk={handleDropLaptopOnDesk}
-              onDeskClick={handleDeskClick} // This click refers to a click on an actual desk cell
+              onDeskClick={handleDeskClick}
               rows={currentRoom.rows}
               cols={currentRoom.cols}
-              rowGap={currentRoom.rowGap ?? 0}
-              colGap={currentRoom.colGap ?? 0}
+              corridorsAfterRows={currentRoom.corridorsAfterRows || []}
+              corridorsAfterCols={currentRoom.corridorsAfterCols || []}
             />
           ) : (
             <Card className="h-full flex items-center justify-center">
@@ -536,4 +542,3 @@ export default function HomePage() {
     </div>
   );
 }
-

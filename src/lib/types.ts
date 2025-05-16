@@ -4,8 +4,8 @@ export interface Room {
   name: string;
   rows: number;
   cols: number;
-  rowGap?: number; // Optional: number of empty cells between rows
-  colGap?: number; // Optional: number of empty cells between columns
+  corridorsAfterRows?: number[]; // 1-indexed rows after which a corridor exists
+  corridorsAfterCols?: number[]; // 1-indexed columns after which a corridor exists
 }
 
 export interface Laptop {
@@ -28,4 +28,3 @@ export interface Student {
 export interface Desk {
   id: number;
 }
-

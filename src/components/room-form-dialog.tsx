@@ -17,6 +17,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription as FormDesc, // Renamed to avoid conflict
   FormField,
   FormItem,
   FormLabel,
@@ -25,43 +26,89 @@ import {
 import { Input } from "@/components/ui/input";
 import { useEffect } from "react";
 
-const roomFormSchema = z.object({
+// Schema for form values, corridors are strings here
+const roomFormValuesSchema = z.object({
   name: z.string().min(1, { message: "Room name is required." }),
   rows: z.coerce.number().min(1, { message: "Rows must be at least 1." }).max(10, { message: "Rows cannot exceed 10." }),
   cols: z.coerce.number().min(1, { message: "Columns must be at least 1." }).max(10, { message: "Columns cannot exceed 10." }),
-  rowGap: z.coerce.number().min(0, "Gap must be 0 or more.").max(3, "Gap cannot exceed 3.").optional().default(0),
-  colGap: z.coerce.number().min(0, "Gap must be 0 or more.").max(3, "Gap cannot exceed 3.").optional().default(0),
+  corridorsAfterRowsInput: z.string().optional().default(""),
+  corridorsAfterColsInput: z.string().optional().default(""),
 });
 
-type RoomFormValues = z.infer<typeof roomFormSchema>;
+// This type is for the form's data directly
+type RoomFormValues = z.infer<typeof roomFormValuesSchema>;
+
+// This type is for the onSubmit handler, after parsing strings to number[]
+export type RoomSubmitData = Omit<RoomFormValues, 'corridorsAfterRowsInput' | 'corridorsAfterColsInput'> & {
+  corridorsAfterRows?: number[];
+  corridorsAfterCols?: number[];
+};
 
 interface RoomFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: RoomFormValues, roomId?: string) => void;
-  initialData?: Room;
+  onSubmit: (data: RoomSubmitData, roomId?: string) => void; // Expects parsed data
+  initialData?: Room; // Room type has number[] for corridors
 }
+
+// Helper to convert array of numbers to comma-separated string
+const formatCorridorsToString = (corridors?: number[]): string => {
+  return corridors && corridors.length > 0 ? corridors.join(", ") : "";
+};
 
 export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: RoomFormDialogProps) {
   const form = useForm<RoomFormValues>({
-    resolver: zodResolver(roomFormSchema),
+    resolver: zodResolver(roomFormValuesSchema),
     defaultValues: initialData 
-      ? { ...initialData, rowGap: initialData.rowGap ?? 0, colGap: initialData.colGap ?? 0 } 
-      : { name: "", rows: 5, cols: 6, rowGap: 0, colGap: 0 },
+      ? { 
+          name: initialData.name,
+          rows: initialData.rows,
+          cols: initialData.cols,
+          corridorsAfterRowsInput: formatCorridorsToString(initialData.corridorsAfterRows),
+          corridorsAfterColsInput: formatCorridorsToString(initialData.corridorsAfterCols),
+        } 
+      : { name: "", rows: 5, cols: 6, corridorsAfterRowsInput: "", corridorsAfterColsInput: "" },
   });
 
  useEffect(() => {
     if (open) {
       if (initialData) {
-        form.reset({ ...initialData, rowGap: initialData.rowGap ?? 0, colGap: initialData.colGap ?? 0 });
+        form.reset({
+          name: initialData.name,
+          rows: initialData.rows,
+          cols: initialData.cols,
+          corridorsAfterRowsInput: formatCorridorsToString(initialData.corridorsAfterRows),
+          corridorsAfterColsInput: formatCorridorsToString(initialData.corridorsAfterCols),
+        });
       } else {
-        form.reset({ name: "", rows: 5, cols: 6, rowGap: 0, colGap: 0 });
+        form.reset({ name: "", rows: 5, cols: 6, corridorsAfterRowsInput: "", corridorsAfterColsInput: "" });
       }
     }
   }, [initialData, form, open]);
 
   const handleSubmit = (data: RoomFormValues) => {
-    onSubmit(data, initialData?.id);
+    // Parsing logic is now expected to be handled by the parent (page.tsx)
+    // For now, we assume onSubmit can handle RoomFormValues or we adjust its signature
+    // For this iteration, we will pass the string values and let page.tsx parse them.
+    // However, the prompt implies the dialog's onSubmit passes the final structure.
+    // So, let's do the parsing here and define a submit type.
+
+    const parseCorridorString = (input: string | undefined, maxDimension: number): number[] => {
+      if (!input) return [];
+      return input.split(',')
+        .map(s => parseInt(s.trim(), 10))
+        .filter(n => !isNaN(n) && n > 0 && n < maxDimension) // Valid corridor if n < max (e.g. for 5 rows, after 1,2,3,4)
+        .sort((a,b) => a-b); // Sort for consistency
+    };
+    
+    const submitData: RoomSubmitData = {
+        name: data.name,
+        rows: data.rows,
+        cols: data.cols,
+        corridorsAfterRows: parseCorridorString(data.corridorsAfterRowsInput, data.rows),
+        corridorsAfterCols: parseCorridorString(data.corridorsAfterColsInput, data.cols),
+    };
+    onSubmit(submitData, initialData?.id);
     onOpenChange(false);
   };
 
@@ -71,7 +118,7 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
         <DialogHeader>
           <DialogTitle>{initialData ? "Edit Room" : "Add New Room"}</DialogTitle>
           <DialogDescription>
-            {initialData ? "Update the room's details and layout." : "Enter the name, dimensions, and corridor gaps for the new room."}
+            {initialData ? "Update the room's details and layout." : "Enter the name, dimensions, and specific corridor placements."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -95,7 +142,7 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
                 name="rows"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Number of Rows</FormLabel>
+                    <FormLabel>Number of Desk Rows</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="e.g., 5" {...field} />
                     </FormControl>
@@ -108,7 +155,7 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
                 name="cols"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Number of Columns</FormLabel>
+                    <FormLabel>Number of Desk Columns</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="e.g., 6" {...field} />
                     </FormControl>
@@ -117,34 +164,34 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
                 )}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="rowGap"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Row Gap (Corridors)</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="e.g., 0 or 1" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="colGap"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Column Gap (Corridors)</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="e.g., 0 or 1" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="corridorsAfterRowsInput"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Corridors After Rows</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., 2, 4 (1-indexed)" {...field} />
+                  </FormControl>
+                  <FormDesc>Comma-separated row numbers after which a corridor should appear. (Max: {form.getValues().rows - 1 || 'N/A'})</FormDesc>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="corridorsAfterColsInput"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Corridors After Columns</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., 1, 3 (1-indexed)" {...field} />
+                  </FormControl>
+                   <FormDesc>Comma-separated column numbers after which a corridor should appear. (Max: {form.getValues().cols - 1 || 'N/A'})</FormDesc>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit">{initialData ? "Save Changes" : "Add Room"}</Button>
@@ -155,4 +202,3 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
     </Dialog>
   );
 }
-

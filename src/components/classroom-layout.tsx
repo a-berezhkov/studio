@@ -5,15 +5,15 @@ import type { Laptop, Student, Desk } from "@/lib/types";
 import { DeskCell } from "@/components/desk-cell";
 
 interface ClassroomLayoutProps {
-  desks: Desk[]; // Array of actual desks {id: 1}, {id: 2}, ...
+  desks: Desk[]; 
   laptops: Laptop[];
   students: Student[];
   onDropLaptopOnDesk: (deskId: number, laptopId: string) => void;
-  onDeskClick: (deskId: number, laptop: Laptop | undefined) => void; // deskId is the actual desk ID
-  rows: number;
-  cols: number;
-  rowGap: number; // Number of empty cells between rows
-  colGap: number; // Number of empty cells between columns
+  onDeskClick: (deskId: number, laptop: Laptop | undefined) => void;
+  rows: number; // Number of actual desk rows
+  cols: number; // Number of actual desk columns
+  corridorsAfterRows: number[]; // 1-indexed array of row numbers after which a corridor appears
+  corridorsAfterCols: number[]; // 1-indexed array of col numbers after which a corridor appears
 }
 
 const CorridorCell = () => (
@@ -24,15 +24,15 @@ const CorridorCell = () => (
 );
 
 export function ClassroomLayout({
-  desks, // These are the actual desks, length = rows * cols
+  desks,
   laptops,
   students,
   onDropLaptopOnDesk,
   onDeskClick,
   rows,
   cols,
-  rowGap = 0,
-  colGap = 0,
+  corridorsAfterRows = [],
+  corridorsAfterCols = [],
 }: ClassroomLayoutProps) {
   
   const getLaptopAtDesk = (deskId: number): Laptop | undefined => {
@@ -44,25 +44,31 @@ export function ClassroomLayout({
     return students.find((student) => student.id === laptop.studentId);
   };
 
-  const effectiveRowGap = rows > 1 ? rowGap : 0;
-  const effectiveColGap = cols > 1 ? colGap : 0;
-
-  const visualRows = rows + Math.max(0, rows - 1) * effectiveRowGap;
-  const visualCols = cols + Math.max(0, cols - 1) * effectiveColGap;
-
-  const gridCells = [];
+  const gridCells: JSX.Element[] = [];
   let deskIndex = 0;
+  let maxVisualCols = cols; // Start with base columns
 
-  for (let r = 0; r < rows; r++) {
-    // Render a row of desks
-    for (let c = 0; c < cols; c++) {
+  // Pre-calculate maxVisualCols for the grid-template-columns
+  // This considers the number of actual columns plus any specified column corridors
+  let tempVisualCols = cols;
+  for (let c = 0; c < cols -1; c++) { // Iterate up to cols-1 because corridor is *after* a col
+      if(corridorsAfterCols.includes(c + 1)) { // c+1 is 1-indexed column
+          tempVisualCols++;
+      }
+  }
+  maxVisualCols = tempVisualCols;
+
+
+  for (let r = 0; r < rows; r++) { // Iterate 0-indexed actual desk rows
+    const currentRowVisualCells: JSX.Element[] = [];
+    for (let c = 0; c < cols; c++) { // Iterate 0-indexed actual desk columns
       const currentDesk = desks[deskIndex++];
-      if (!currentDesk) continue; // Should not happen if desks array is correct
+      if (!currentDesk) continue;
 
       const laptopOnDesk = getLaptopAtDesk(currentDesk.id);
       const studentAssigned = getStudentForLaptop(laptopOnDesk);
       
-      gridCells.push(
+      currentRowVisualCells.push(
         <DeskCell
           key={`desk-${currentDesk.id}`}
           desk={currentDesk}
@@ -73,25 +79,23 @@ export function ClassroomLayout({
         />
       );
 
-      // Render column gaps after this desk if not the last column
-      if (c < cols - 1 && effectiveColGap > 0) {
-        for (let g = 0; g < effectiveColGap; g++) {
-          gridCells.push(<CorridorCell key={`col-gap-${r}-${c}-${g}`} />);
-        }
+      // Add a column corridor *after* the current column 'c' (1-indexed c+1)
+      // if it's specified and not after the very last column
+      if (corridorsAfterCols.includes(c + 1) && c < cols - 1) {
+        currentRowVisualCells.push(<CorridorCell key={`col-corridor-${r}-${c}`} />);
       }
     }
+    gridCells.push(...currentRowVisualCells);
 
-    // Render row gaps after this row of desks if not the last row
-    if (r < rows - 1 && effectiveRowGap > 0) {
-      for (let g = 0; g < effectiveRowGap; g++) {
-        // This full-width row gap will span `visualCols`
-        for (let vc = 0; vc < visualCols; vc++) {
-           gridCells.push(<CorridorCell key={`row-gap-block-${r}-${g}-${vc}`} />);
-        }
+    // Add a row corridor *after* the current row 'r' (1-indexed r+1)
+    // if it's specified and not after the very last row
+    if (corridorsAfterRows.includes(r + 1) && r < rows - 1) {
+      // The row corridor should span the full visual width determined by maxVisualCols
+      for (let cg = 0; cg < maxVisualCols; cg++) {
+         gridCells.push(<CorridorCell key={`row-corridor-${r}-${cg}`} />);
       }
     }
   }
-
 
   return (
     <div className="bg-card p-4 md:p-6 rounded-lg shadow-md">
@@ -99,8 +103,7 @@ export function ClassroomLayout({
       <div
         className="grid gap-3 md:gap-4"
         style={{
-          gridTemplateColumns: `repeat(${visualCols}, minmax(0, 1fr))`,
-          // gridTemplateRows: `repeat(${visualRows}, auto)`, // Let content define row height, or use fixed height
+          gridTemplateColumns: `repeat(${maxVisualCols}, minmax(0, 1fr))`,
         }}
         aria-label="Classroom Layout Grid"
       >
@@ -109,4 +112,3 @@ export function ClassroomLayout({
     </div>
   );
 }
-
