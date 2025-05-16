@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 interface DeskCellProps {
   desk: Desk;
   laptop?: Laptop;
-  students?: Student[]; // Changed from student to students array
+  students?: Student[]; 
   groups?: Group[]; 
   onDrop: (laptopId: string) => void;
   onClick: () => void;
@@ -41,17 +41,30 @@ export function DeskCell({ desk, laptop, students = [], groups = [], onDrop, onC
   const hasLaptop = !!laptop;
   const hasStudents = students && students.length > 0;
 
-  const tooltipContent = [];
-  if (laptop) tooltipContent.push(`Ноутбук: ${laptop.login}`);
-  if (hasStudents) {
-    tooltipContent.push(`Учащиеся: ${students.map(s => s.name).join(', ')}`);
-    if (students.length === 1 && students[0].groupId) {
-        const group = groups.find(g => g.id === students[0].groupId);
-        if (group) tooltipContent.push(`Группа: ${group.name}`);
-    } else if (students.length > 1) {
-        // Could list groups if diverse, or primary group
+  const renderTooltipContent = () => {
+    const contentLines: React.ReactNode[] = [];
+
+    if (laptop) {
+      contentLines.push(<p key="laptop-info" className="font-semibold">Ноутбук: {laptop.login}</p>);
     }
-  }
+
+    if (hasStudents) {
+      contentLines.push(<p key="students-header" className="font-semibold mt-1.5">Учащиеся:</p>);
+      students.forEach(student => {
+        const group = groups.find(g => g.id === student.groupId);
+        contentLines.push(
+          <p key={student.id} className="ml-2 text-sm">
+            • {student.name} <span className="text-xs text-muted-foreground">({group ? group.name : 'Группа не указана'})</span>
+          </p>
+        );
+      });
+    }
+
+    if (contentLines.length === 0) {
+      return <p className="text-sm">Стол свободен</p>;
+    }
+    return <div className="space-y-0.5">{contentLines}</div>;
+  };
 
 
   return (
@@ -75,46 +88,43 @@ export function DeskCell({ desk, laptop, students = [], groups = [], onDrop, onC
           <div className="flex flex-col items-center justify-center space-y-1 flex-grow">
             {laptop ? (
               <Tooltip>
-                <TooltipTrigger>
-                  <LaptopIcon className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+                <TooltipTrigger asChild>
+                   {/* Using asChild on TooltipTrigger and wrapping the icon in a span or div can help if direct icon triggering is problematic */}
+                  <span><LaptopIcon className="w-6 h-6 md:w-8 md:h-8 text-primary" /></span>
                 </TooltipTrigger>
-                {tooltipContent.length > 0 && (
-                  <TooltipContent>
-                    {tooltipContent.map((line, idx) => <p key={idx}>{line}</p>)}
-                  </TooltipContent>
-                )}
+                <TooltipContent side="top" align="center" className="bg-popover text-popover-foreground shadow-md rounded-md p-2 max-w-xs">
+                  {renderTooltipContent()}
+                </TooltipContent>
               </Tooltip>
             ) : (
                <Computer className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground opacity-50" />
             )}
             {laptop && hasStudents && (
               <Tooltip>
-                <TooltipTrigger>
+                <TooltipTrigger asChild>
+                   <span>
                    {students.length > 1 ? 
                     <UsersIcon className="w-4 h-4 md:w-5 md:h-5 text-accent-foreground" /> : 
                     <UserIcon className="w-4 h-4 md:w-5 md:h-5 text-accent-foreground" />
                    }
+                   </span>
                 </TooltipTrigger>
-                 {tooltipContent.length > 0 && (
-                  <TooltipContent>
-                    {tooltipContent.map((line, idx) => <p key={idx}>{line}</p>)}
-                  </TooltipContent>
-                )}
+                 <TooltipContent side="top" align="center" className="bg-popover text-popover-foreground shadow-md rounded-md p-2 max-w-xs">
+                  {renderTooltipContent()}
+                </TooltipContent>
               </Tooltip>
             )}
              {laptop && hasStudents && students.length === 1 && students[0].groupId && groups.find(g => g.id === students[0].groupId) && (
                <Tooltip>
-                <TooltipTrigger>
-                    <Package className="w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground" />
+                <TooltipTrigger asChild>
+                    <span><Package className="w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground" /></span>
                 </TooltipTrigger>
-                 {tooltipContent.length > 0 && (
-                  <TooltipContent>
-                    {tooltipContent.map((line, idx) => <p key={idx}>{line}</p>)}
-                  </TooltipContent>
-                )}
+                 <TooltipContent side="top" align="center" className="bg-popover text-popover-foreground shadow-md rounded-md p-2 max-w-xs">
+                  {renderTooltipContent()}
+                </TooltipContent>
               </Tooltip>
             )}
-             {!hasStudents && laptop && ( // Keep consistent spacing if student/group is missing
+             {!hasStudents && laptop && ( 
              <div className="w-4 h-4 md:w-5 md:h-5" /> 
           )}
           </div>
@@ -123,3 +133,4 @@ export function DeskCell({ desk, laptop, students = [], groups = [], onDrop, onC
     </TooltipProvider>
   );
 }
+
