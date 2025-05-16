@@ -68,68 +68,54 @@ export function DeskCell({ desk, laptop, students = [], groups = [], onDrop, onC
 
 
   return (
-    <TooltipProvider delayDuration={200}>
-      <Card
-        className={cn(
-          "aspect-square flex flex-col items-center justify-center p-2 transition-all duration-150 ease-in-out transform hover:scale-105 hover:shadow-lg",
-          hasLaptop ? "bg-secondary border-primary shadow-primary/20" : "bg-muted/50 hover:bg-accent/30",
-          onClick ? "cursor-pointer" : "cursor-default", 
-          "border-2"
-        )}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        onClick={onClick}
-        aria-label={`Стол ${desk.id}${laptop ? `, занят ноутбуком ${laptop.login}` : ', пустой'}`}
-        tabIndex={onClick ? 0 : -1} 
-        onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onClick) onClick(); }}
-      >
-        <CardContent className="flex flex-col items-center justify-center p-1 w-full h-full">
-          <span className="text-xs font-medium text-muted-foreground absolute top-1 right-1.5">{desk.id}</span>
-          <div className="flex flex-col items-center justify-center space-y-1 flex-grow">
-            {laptop ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                   {/* Using asChild on TooltipTrigger and wrapping the icon in a span or div can help if direct icon triggering is problematic */}
-                  <span><LaptopIcon className="w-6 h-6 md:w-8 md:h-8 text-primary" /></span>
-                </TooltipTrigger>
-                <TooltipContent side="top" align="center" className="bg-popover text-popover-foreground shadow-md rounded-md p-2 max-w-xs">
-                  {renderTooltipContent()}
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-               <Computer className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground opacity-50" />
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Card
+            className={cn(
+              "aspect-square flex flex-col items-center justify-center p-2 transition-all duration-150 ease-in-out transform hover:scale-105 hover:shadow-lg group relative", // Added group and relative for z-index context
+              "hover:z-10", // Apply z-index on hover
+              hasLaptop ? "bg-secondary border-primary shadow-primary/20" : "bg-muted/50 hover:bg-accent/30",
+              onClick ? "cursor-pointer" : "cursor-default", 
+              "border-2"
             )}
-            {laptop && hasStudents && (
-              <Tooltip>
-                <TooltipTrigger asChild>
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onClick={onClick}
+            aria-label={`Стол ${desk.id}${laptop ? `, занят ноутбуком ${laptop.login}` : ', пустой'}`}
+            tabIndex={onClick ? 0 : -1} 
+            onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onClick) onClick(); }}
+          >
+            <CardContent className="flex flex-col items-center justify-center p-1 w-full h-full">
+              <span className="text-xs font-medium text-muted-foreground absolute top-1 right-1.5">{desk.id}</span>
+              <div className="flex flex-col items-center justify-center space-y-1 flex-grow">
+                {laptop ? (
+                  <span><LaptopIcon className="w-6 h-6 md:w-8 md:h-8 text-primary" /></span>
+                ) : (
+                   <Computer className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground opacity-50" />
+                )}
+                {laptop && hasStudents && (
                    <span>
                    {students.length > 1 ? 
                     <UsersIcon className="w-4 h-4 md:w-5 md:h-5 text-accent-foreground" /> : 
                     <UserIcon className="w-4 h-4 md:w-5 md:h-5 text-accent-foreground" />
                    }
                    </span>
-                </TooltipTrigger>
-                 <TooltipContent side="top" align="center" className="bg-popover text-popover-foreground shadow-md rounded-md p-2 max-w-xs">
-                  {renderTooltipContent()}
-                </TooltipContent>
-              </Tooltip>
-            )}
-             {laptop && hasStudents && students.length === 1 && students[0].groupId && groups.find(g => g.id === students[0].groupId) && (
-               <Tooltip>
-                <TooltipTrigger asChild>
-                    <span><Package className="w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground" /></span>
-                </TooltipTrigger>
-                 <TooltipContent side="top" align="center" className="bg-popover text-popover-foreground shadow-md rounded-md p-2 max-w-xs">
-                  {renderTooltipContent()}
-                </TooltipContent>
-              </Tooltip>
-            )}
-             {!hasStudents && laptop && ( 
-             <div className="w-4 h-4 md:w-5 md:h-5" /> 
-          )}
-          </div>
-        </CardContent>
-      </Card>
+                )}
+                 {laptop && hasStudents && students.length === 1 && students[0].groupId && groups.find(g => g.id === students[0].groupId) && (
+                   <span><Package className="w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground" /></span>
+                )}
+                 {!hasStudents && laptop && ( 
+                 <div className="w-4 h-4 md:w-5 md:h-5" /> 
+              )}
+              </div>
+            </CardContent>
+          </Card>
+        </TooltipTrigger>
+        <TooltipContent side="top" align="center" className="bg-popover text-popover-foreground shadow-md rounded-md p-2 max-w-xs z-50"> {/* Explicitly set z-index on content */}
+          {renderTooltipContent()}
+        </TooltipContent>
+      </Tooltip>
     </TooltipProvider>
   );
 }
