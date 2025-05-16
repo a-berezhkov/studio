@@ -12,14 +12,14 @@ import { RoomFormDialog, type RoomSubmitData } from "@/components/room-form-dial
 import { AssignStudentDialog } from "@/components/assign-student-dialog";
 import { ViewCredentialsDialog } from "@/components/view-credentials-dialog";
 import { DeskActionModal } from "@/components/desk-action-modal";
-import { AdminLoginDialog } from "@/components/admin-login-dialog"; // New import
+import { AdminLoginDialog } from "@/components/admin-login-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Edit3, Trash2, Eye, UserPlus, Users, Laptop as LaptopIconLucide, Home, Edit, LogIn, LogOut } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, Eye, UserPlus, Users, Laptop as LaptopIconLucide, Home, Edit, LogIn, LogOut, ShieldAlert } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -36,7 +36,7 @@ const ADMIN_PASSWORD = "password";
 export default function HomePage() {
   const { toast } = useToast();
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
+  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(true); // Start with login dialog open
 
   const [rooms, setRooms] = useState<Room[]>([]);
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
@@ -70,8 +70,15 @@ export default function HomePage() {
   const currentRoom = rooms.find(r => r.id === currentRoomId);
 
   useEffect(() => {
-    if (rooms.length === 0) {
-      const defaultRoom: Room = { 
+    const storedRooms = localStorage.getItem('rooms');
+    const storedLaptops = localStorage.getItem('laptops');
+    const storedStudents = localStorage.getItem('students');
+    const storedCurrentRoomId = localStorage.getItem('currentRoomId');
+
+    if (storedRooms) {
+      setRooms(JSON.parse(storedRooms));
+    } else {
+       const defaultRoom: Room = { 
         id: DEFAULT_ROOM_ID, 
         name: "Main Classroom", 
         rows: 5, 
@@ -80,23 +87,50 @@ export default function HomePage() {
         corridorsAfterCols: [],
       };
       setRooms([defaultRoom]);
-      setCurrentRoomId(defaultRoom.id);
-    } else if (!currentRoomId && rooms.length > 0) {
-      setCurrentRoomId(rooms[0].id);
     }
-  
-    const mockLaptops: Laptop[] = [
-      { id: "laptop-1", login: "Room5-L01", password: "password1", locationId: 1, studentId: "student-1", notes: "This is a note for laptop 1.", roomId: DEFAULT_ROOM_ID },
-      { id: "laptop-2", login: "Room5-L02", password: "password2", locationId: 2, studentId: null, notes: "", roomId: DEFAULT_ROOM_ID },
-      { id: "laptop-3", login: "Room5-L03", password: "password3", locationId: null, studentId: null, notes: "Unassigned laptop note.", roomId: DEFAULT_ROOM_ID },
-    ];
-    const mockStudents: Student[] = [
-      { id: "student-1", name: "Alice Wonderland", groupNumber: "CS101", roomId: DEFAULT_ROOM_ID },
-      { id: "student-2", name: "Bob The Builder", groupNumber: "ENG202", roomId: DEFAULT_ROOM_ID },
-    ];
-    setLaptops(mockLaptops);
-    setStudents(mockStudents);
+
+    if (storedLaptops) {
+      setLaptops(JSON.parse(storedLaptops));
+    } else {
+        const mockLaptops: Laptop[] = [
+            { id: "laptop-1", login: "Room5-L01", password: "password1", locationId: 1, studentId: "student-1", notes: "This is a note for laptop 1.", roomId: DEFAULT_ROOM_ID },
+            { id: "laptop-2", login: "Room5-L02", password: "password2", locationId: 2, studentId: null, notes: "", roomId: DEFAULT_ROOM_ID },
+            { id: "laptop-3", login: "Room5-L03", password: "password3", locationId: null, studentId: null, notes: "Unassigned laptop note.", roomId: DEFAULT_ROOM_ID },
+        ];
+        setLaptops(mockLaptops);
+    }
+    if (storedStudents) {
+        setStudents(JSON.parse(storedStudents));
+    } else {
+        const mockStudents: Student[] = [
+            { id: "student-1", name: "Alice Wonderland", groupNumber: "CS101", roomId: DEFAULT_ROOM_ID },
+            { id: "student-2", name: "Bob The Builder", groupNumber: "ENG202", roomId: DEFAULT_ROOM_ID },
+        ];
+        setStudents(mockStudents);
+    }
+    
+    if (storedCurrentRoomId) {
+        setCurrentRoomId(storedCurrentRoomId);
+    } else if (rooms.length > 0) {
+        setCurrentRoomId(rooms[0].id);
+    } else {
+        // If no rooms from storage and default room logic just ran, set currentRoomId
+        setCurrentRoomId(DEFAULT_ROOM_ID);
+    }
+
   }, []); 
+
+  useEffect(() => {
+    if (rooms.length > 0 && !currentRoomId) {
+        const storedCurrentRoomId = localStorage.getItem('currentRoomId');
+        if (storedCurrentRoomId && rooms.find(r => r.id === storedCurrentRoomId)) {
+            setCurrentRoomId(storedCurrentRoomId);
+        } else {
+            setCurrentRoomId(rooms[0].id);
+        }
+    }
+  }, [rooms, currentRoomId]);
+
 
   useEffect(() => {
     if (currentRoom) {
@@ -113,6 +147,16 @@ export default function HomePage() {
     }
   }, [currentRoomId, rooms, currentRoom?.rows, currentRoom?.cols]);
 
+  useEffect(() => {
+    if (isAdminAuthenticated) {
+      localStorage.setItem('rooms', JSON.stringify(rooms));
+      localStorage.setItem('laptops', JSON.stringify(laptops));
+      localStorage.setItem('students', JSON.stringify(students));
+      if (currentRoomId) localStorage.setItem('currentRoomId', currentRoomId);
+    }
+  }, [rooms, laptops, students, currentRoomId, isAdminAuthenticated]);
+
+
   const handleAdminLogin = (login: string, password_param: string) => {
     if (login === ADMIN_LOGIN && password_param === ADMIN_PASSWORD) {
       setIsAdminAuthenticated(true);
@@ -125,6 +169,7 @@ export default function HomePage() {
 
   const handleAdminLogout = () => {
     setIsAdminAuthenticated(false);
+    setIsLoginDialogOpen(true); // Show login dialog on logout
     toast({ title: "Logged Out", description: "You have been logged out." });
   };
 
@@ -171,6 +216,7 @@ export default function HomePage() {
         return remainingRooms;
      });
      setItemToDelete(null);
+     toast({ title: "Room Deleted", description: "The room and its contents have been removed." });
   }
 
   const handleAddOrUpdateLaptop = (formData: { login: string; password?: string }, laptopId?: string) => {
@@ -178,9 +224,11 @@ export default function HomePage() {
     if (laptopId) { 
       setLaptops(laps => laps.map(lap => {
         if (lap.id === laptopId) {
-          const updatedLaptop = { ...lap, login: formData.login };
-          if (typeof formData.password === 'string') { // Check if password was actually provided
+          const updatedLaptop = { ...lap, login: formData.login, notes: lap.notes || "" };
+          if (typeof formData.password === 'string' && formData.password.length > 0) { 
             updatedLaptop.password = formData.password;
+          } else if (formData.password === "" && typeof lap.password === 'string') { 
+            updatedLaptop.password = "";
           }
           return updatedLaptop;
         }
@@ -193,7 +241,7 @@ export default function HomePage() {
         password: formData.password || "", 
         locationId: laptopToCreateAtDesk ? laptopToCreateAtDesk.id : null,
         studentId: null,
-        notes: "",
+        notes: "", 
         roomId: currentRoomId,
       };
       setLaptops(laps => [...laps, newLaptop]);
@@ -227,11 +275,13 @@ export default function HomePage() {
     if (!isAdminAuthenticated || !itemToDelete) return;
     if (itemToDelete.type === 'laptop') {
       setLaptops(laps => laps.filter(lap => lap.id !== itemToDelete.id));
+      toast({ title: "Laptop Deleted", description: "The laptop has been removed." });
     } else if (itemToDelete.type === 'student') {
       setLaptops(laps => laps.map(lap => lap.studentId === itemToDelete.id ? { ...lap, studentId: null } : lap));
       setStudents(stus => stus.filter(stu => stu.id !== itemToDelete.id));
+      toast({ title: "Student Deleted", description: "The student has been removed." });
     } else if (itemToDelete.type === 'room') {
-      confirmDeleteRoom(itemToDelete.id);
+      confirmDeleteRoom(itemToDelete.id); // Toast is handled in confirmDeleteRoom
     }
     setItemToDelete(null);
   };
@@ -256,278 +306,387 @@ export default function HomePage() {
   };
 
   const handleDropLaptopOnDesk = (deskId: number, laptopIdToDrop: string) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated || !currentRoomId) return;
     setLaptops(prevLaptops => {
       const droppedLaptop = prevLaptops.find(l => l.id === laptopIdToDrop);
-      if (!droppedLaptop || droppedLaptop.roomId !== currentRoomId) return prevLaptops; 
+      if (!droppedLaptop || droppedLaptop.roomId !== currentRoomId) {
+        toast({ title: "Error", description: "Cannot move laptop from another room.", variant: "destructive"});
+        return prevLaptops;
+      }
       
       const existingLaptopAtDesk = prevLaptops.find(l => l.roomId === currentRoomId && l.locationId === deskId);
 
       return prevLaptops.map(lap => {
-        if (lap.roomId !== currentRoomId) return lap;
-
-        if (lap.id === laptopIdToDrop) return { ...lap, locationId: deskId };
-        if (existingLaptopAtDesk && lap.id === existingLaptopAtDesk.id && existingLaptopAtDesk.id !== laptopIdToDrop) {
-          return { ...lap, locationId: null }; 
+        if (lap.id === laptopIdToDrop) {
+          return { ...lap, locationId: deskId, roomId: currentRoomId };
+        }
+        if (existingLaptopAtDesk && lap.id === existingLaptopAtDesk.id) {
+          return { ...lap, locationId: droppedLaptop.locationId, roomId: currentRoomId }; // Swap locations
         }
         return lap;
       });
     });
     setDraggedLaptopId(null);
   };
-  
-  const handleDeskClick = (deskId: number) => {
-    const desk = desks.find(d => d.id === deskId);
-    if (!desk || !currentRoomId) return;
 
-    const laptopOnDesk = laptopsInCurrentRoom.find(l => l.locationId === deskId);
-    let studentOnLaptop: Student | undefined = undefined;
-    if (laptopOnDesk && laptopOnDesk.studentId) {
-      studentOnLaptop = studentsInCurrentRoom.find(s => s.id === laptopOnDesk.studentId);
-    }
-    setCurrentActionDesk({ desk, laptop: laptopOnDesk, student: studentOnLaptop });
-    setIsDeskActionModalOpen(true); // Modal itself can open, actions inside are restricted
+  const handleAssignStudentToLaptop = (laptopId: string, studentId: string) => {
+    if (!isAdminAuthenticated || !currentRoomId) return;
+    
+    let newLaptops = [...laptops];
+
+    newLaptops = newLaptops.map(otherLap => {
+      if (otherLap.studentId === studentId && otherLap.id !== laptopId && otherLap.roomId === currentRoomId) {
+        return { ...otherLap, studentId: null };
+      }
+      return otherLap;
+    });
+
+    newLaptops = newLaptops.map(lap => {
+      if (lap.id === laptopId && lap.roomId === currentRoomId) {
+        return { ...lap, studentId };
+      }
+      return lap;
+    });
+
+    setLaptops(newLaptops);
+    setIsAssignStudentOpen(false);
+    setLaptopToAssign(null);
+    setIsDeskActionModalOpen(false);
+    toast({ title: "Student Assigned", description: "The student has been assigned to the laptop." });
   };
 
-  const handleAssignStudent = (laptopId: string, studentId: string) => {
+  const handleUnassignStudentFromLaptop = (laptopId: string) => {
     if (!isAdminAuthenticated || !currentRoomId) return;
     setLaptops(laps => laps.map(lap => {
-      if (lap.roomId !== currentRoomId) return lap;
-      if (lap.id === laptopId) return { ...lap, studentId: studentId };
-      if (lap.studentId === studentId && lap.id !== laptopId) return { ...lap, studentId: null };
+      if (lap.id === laptopId && lap.roomId === currentRoomId) {
+        return { ...lap, studentId: null };
+      }
       return lap;
     }));
-    
-    if (currentActionDesk?.laptop?.id === laptopId) {
-        const updatedStudent = studentsInCurrentRoom.find(s => s.id === studentId);
-        setCurrentActionDesk(prev => prev ? {...prev, laptop: {...prev.laptop!, studentId: studentId}, student: updatedStudent} : null);
-    }
-    setIsAssignStudentOpen(false); 
+    setIsDeskActionModalOpen(false);
+    toast({ title: "Student Unassigned", description: "The student has been unassigned." });
   };
   
-  const handleUnassignStudent = (laptopId: string) => {
-    if (!isAdminAuthenticated) return;
-    setLaptops(laps => laps.map(lap => (lap.id === laptopId && lap.roomId === currentRoomId) ? { ...lap, studentId: null } : lap));
-     if (currentActionDesk?.laptop?.id === laptopId) {
-        setCurrentActionDesk(prev => prev ? {...prev, laptop: {...prev.laptop!, studentId: null}, student: undefined} : null);
-    }
-  };
-
   const handleUnassignLocation = (laptopId: string) => {
-    if (!isAdminAuthenticated) return;
-    setLaptops(laps => laps.map(lap => (lap.id === laptopId && lap.roomId === currentRoomId) ? { ...lap, locationId: null } : lap));
+    if (!isAdminAuthenticated || !currentRoomId) return;
+    setLaptops(laps => laps.map(lap => {
+      if (lap.id === laptopId && lap.roomId === currentRoomId) {
+        return { ...lap, locationId: null };
+      }
+      return lap;
+    }));
+    toast({ title: "Laptop Unassigned", description: "The laptop has been unassigned from its desk." });
   };
 
-  const handleSaveLaptopNotes = (laptopId: string, notes: string) => {
-    if (!isAdminAuthenticated) return;
-    setLaptops(laps => laps.map(lap => (lap.id === laptopId && lap.roomId === currentRoomId) ? { ...lap, notes } : lap));
+  const handleOpenDeskActionModal = (deskId: number) => {
+    if (!currentRoom) return;
+    const desk = desks.find(d => d.id === deskId);
+    if (!desk) return;
+
+    const laptopOnDesk = laptops.find(l => l.roomId === currentRoom.id && l.locationId === deskId);
+    const studentAssigned = laptopOnDesk && laptopOnDesk.studentId
+      ? students.find(s => s.id === laptopOnDesk.studentId && s.roomId === currentRoom.id)
+      : undefined;
+
+    setCurrentActionDesk({ desk, laptop: laptopOnDesk, student: studentAssigned });
+    setIsDeskActionModalOpen(true);
+  };
+
+  const handleSaveNotes = (laptopId: string, notes: string) => {
+    if (!isAdminAuthenticated || !currentRoomId) return;
+    setLaptops(laps => laps.map(lap => {
+      if (lap.id === laptopId && lap.roomId === currentRoomId) {
+        return { ...lap, notes };
+      }
+      return lap;
+    }));
+    toast({ title: "Notes Saved", description: `Notes for laptop updated.` });
     if (currentActionDesk?.laptop?.id === laptopId) {
-        setCurrentActionDesk(prev => prev ? {...prev, laptop: {...prev.laptop!, notes: notes}} : null);
+        setCurrentActionDesk(prev => prev ? {...prev, laptop: {...prev.laptop!, notes}} : null);
     }
   };
-  
-  const openEditLaptopDialog = useCallback((laptop: Laptop) => {
-    if (!isAdminAuthenticated) return;
-    setEditingLaptop(laptop);
-    setIsLaptopFormOpen(true);
-    setIsDeskActionModalOpen(false);
-  }, [isAdminAuthenticated]);
 
-  const openViewCredentialsDialog = useCallback((laptop: Laptop) => {
-    // Viewing credentials might be allowed for non-admins based on policy.
-    // For now, let's keep it open but actions within edit dialog are restricted.
-    setLaptopToView(laptop);
-    setIsViewCredentialsOpen(true);
-    setIsDeskActionModalOpen(false);
-  }, []);
 
-  const openAssignStudentDialog = useCallback((laptop: Laptop) => {
-    if (!isAdminAuthenticated) return;
-    setLaptopToAssign(laptop);
-    setIsAssignStudentOpen(true);
-  }, [isAdminAuthenticated]);
+  if (!isAdminAuthenticated) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background">
+        <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container flex h-16 items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Home className="h-6 w-6 text-primary" />
+              <h1 className="text-xl font-bold">Classroom Navigator</h1>
+            </div>
+            <Button onClick={() => setIsLoginDialogOpen(true)}>
+              <LogIn className="mr-2 h-4 w-4" /> Admin Login
+            </Button>
+          </div>
+        </header>
+        <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 text-center">
+          <Card className="p-6 md:p-8 max-w-md shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-2xl flex items-center justify-center">
+                <ShieldAlert className="mr-2 h-7 w-7 text-destructive" /> Access Restricted
+              </CardTitle>
+              <CardDescription>
+                Please log in as an administrator to access the application.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button onClick={() => setIsLoginDialogOpen(true)} className="w-full">
+                 <LogIn className="mr-2 h-4 w-4" /> Admin Login
+                </Button>
+            </CardContent>
+          </Card>
+        </main>
+        <footer className="py-6 md:px-8 md:py-0 border-t">
+          <div className="container flex flex-col items-center justify-center gap-4 md:h-24 md:flex-row">
+            <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
+              &copy; {new Date().getFullYear()} Classroom Navigator.
+            </p>
+          </div>
+        </footer>
+        <AdminLoginDialog
+          open={isLoginDialogOpen && !isAdminAuthenticated}
+          onOpenChange={setIsLoginDialogOpen}
+          onLogin={handleAdminLogin}
+        />
+      </div>
+    );
+  }
 
-  const requestAddLaptopToDesk = useCallback((desk: Desk) => {
-    if (!isAdminAuthenticated) return;
-    setLaptopToCreateAtDesk(desk);
-    setEditingLaptop(undefined); 
-    setIsLaptopFormOpen(true);
-    setIsDeskActionModalOpen(false);
-  }, [isAdminAuthenticated]);
-
+  // Derived state for authenticated view
   const laptopsInCurrentRoom = laptops.filter(lap => lap.roomId === currentRoomId);
   const studentsInCurrentRoom = students.filter(stu => stu.roomId === currentRoomId);
-  
-  const unassignedLaptops = laptopsInCurrentRoom.filter(lap => lap.locationId === null);
-  const assignedLaptops = laptopsInCurrentRoom.filter(lap => lap.locationId !== null);
+  const unassignedLaptopsInCurrentRoom = laptopsInCurrentRoom.filter(lap => !lap.locationId);
+  const assignedLaptopsInCurrentRoom = laptopsInCurrentRoom.filter(lap => lap.locationId !== null);
 
 
+  // Main content when admin is authenticated
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <header className="bg-primary text-primary-foreground p-4 shadow-md flex justify-between items-center">
-        <h1 className="text-3xl font-bold">
-          Classroom Navigator {currentRoom ? `- ${currentRoom.name}` : ""}
-        </h1>
-        {isAdminAuthenticated ? (
-          <Button variant="ghost" onClick={handleAdminLogout} className="text-primary-foreground hover:bg-primary/80">
-            <LogOut className="mr-2 h-5 w-5" /> Logout Admin
+    <div className="flex flex-col min-h-screen bg-background">
+      <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Home className="mr-2 h-6 w-6 text-primary" />
+            <h1 className="text-xl font-bold">Classroom Navigator {currentRoom ? `- ${currentRoom.name}` : ''}</h1>
+          </div>
+          <Button onClick={handleAdminLogout} variant="outline">
+            <LogOut className="mr-2 h-4 w-4" /> Admin Logout
           </Button>
-        ) : (
-          <Button variant="ghost" onClick={() => setIsLoginDialogOpen(true)} className="text-primary-foreground hover:bg-primary/80">
-            <LogIn className="mr-2 h-5 w-5" /> Admin Login
-          </Button>
-        )}
+        </div>
       </header>
 
-      <main className="flex-grow container mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-        <section className="lg:col-span-2">
-          {currentRoom ? (
-            <ClassroomLayout
-              desks={desks}
-              laptops={laptopsInCurrentRoom}
-              students={studentsInCurrentRoom}
-              onDropLaptopOnDesk={handleDropLaptopOnDesk}
-              onDeskClick={handleDeskClick}
-              rows={currentRoom.rows}
-              cols={currentRoom.cols}
-              corridorsAfterRows={currentRoom.corridorsAfterRows || []}
-              corridorsAfterCols={currentRoom.corridorsAfterCols || []}
-              isAdminAuthenticated={isAdminAuthenticated}
-            />
-          ) : (
-            <Card className="h-full flex items-center justify-center">
-              <CardContent className="text-center">
-                <p className="text-xl text-muted-foreground">Please select or create a room to begin.</p>
+      <main className="flex-1 p-4 md:p-6 lg:p-8">
+        {!currentRoomId && rooms.length > 0 && (
+             <Card className="mb-6">
+                <CardContent className="pt-6 text-center">
+                    <p className="text-lg font-semibold">Welcome, Admin!</p>
+                    <p className="text-muted-foreground">Please select a room to get started, or add a new one.</p>
+                </CardContent>
+             </Card>
+        )}
+        {!currentRoomId && rooms.length === 0 && (
+             <Card className="mb-6">
+                <CardContent className="pt-6 text-center">
+                    <p className="text-lg font-semibold">No Rooms Available</p>
+                    <p className="text-muted-foreground">Please add a new room to begin managing your classroom.</p>
+                     <Button
+                        onClick={() => { setEditingRoom(undefined); setIsRoomFormOpen(true); }}
+                        className="mt-4"
+                        disabled={!isAdminAuthenticated}
+                      >
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add First Room
+                      </Button>
+                </CardContent>
+             </Card>
+        )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            {currentRoom ? (
+              <ClassroomLayout
+                desks={desks}
+                laptops={assignedLaptopsInCurrentRoom}
+                students={studentsInCurrentRoom}
+                onDropLaptopOnDesk={handleDropLaptopOnDesk}
+                onDeskClick={(deskId) => handleOpenDeskActionModal(deskId)}
+                rows={currentRoom.rows}
+                cols={currentRoom.cols}
+                corridorsAfterRows={currentRoom.corridorsAfterRows || []}
+                corridorsAfterCols={currentRoom.corridorsAfterCols || []}
+                isAdminAuthenticated={isAdminAuthenticated}
+              />
+            ) : (
+              <Card className="h-[400px] flex items-center justify-center bg-muted/20 border-dashed">
+                <CardContent className="text-center">
+                   <Home className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-4" />
+                  <p className="text-muted-foreground">Select or create a room to view the layout.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center"><Home className="mr-2 h-5 w-5" /> Room Management</CardTitle>
+                <CardDescription>Select, add, or edit classroom rooms.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <Label htmlFor="room-select">Current Room</Label>
+                  <Select
+                    value={currentRoomId || ""}
+                    onValueChange={(value) => {
+                        if (value === "__add_new_room__") {
+                            setEditingRoom(undefined); 
+                            setIsRoomFormOpen(true);
+                        } else {
+                            setCurrentRoomId(value);
+                        }
+                    }}
+                    disabled={!isAdminAuthenticated || rooms.length === 0 && !currentRoomId}
+                  >
+                    <SelectTrigger id="room-select">
+                      <SelectValue placeholder="Select a room" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rooms.map(room => (
+                        <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
+                      ))}
+                       {rooms.length === 0 && <SelectItem value="" disabled>No rooms available</SelectItem>}
+                       <SelectItem value="__add_new_room__" className="text-primary hover:!bg-primary/10">
+                          <PlusCircle className="inline-block mr-2 h-4 w-4" /> Add new room...
+                       </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => { setEditingRoom(undefined); setIsRoomFormOpen(true); }}
+                    className="flex-1"
+                    disabled={!isAdminAuthenticated}
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Room
+                  </Button>
+                  {currentRoom && (
+                    <Button
+                      variant="outline"
+                      onClick={() => { setEditingRoom(currentRoom); setIsRoomFormOpen(true); }}
+                      className="flex-1"
+                      disabled={!isAdminAuthenticated}
+                    >
+                      <Edit className="mr-2 h-4 w-4" /> Edit Room
+                    </Button>
+                  )}
+                </div>
+                 {currentRoom && rooms.length > 1 && (
+                    <Button
+                        variant="destructive"
+                        onClick={() => handleDeleteRoom(currentRoom.id)}
+                        className="w-full"
+                        disabled={!isAdminAuthenticated}
+                    >
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete Room
+                    </Button>
+                )}
               </CardContent>
             </Card>
-          )}
-        </section>
 
-        <aside className="lg:col-span-1 space-y-6">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-xl flex items-center"><Home className="mr-2 h-6 w-6 text-primary" />Room Management</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="room-select" className="text-sm font-medium">Select Room</Label>
-                <Select value={currentRoomId || ""} onValueChange={setCurrentRoomId}>
-                  <SelectTrigger id="room-select">
-                    <SelectValue placeholder="Select a room" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rooms.map(room => (
-                      <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" className="flex-1" onClick={() => { if (isAdminAuthenticated) {setEditingRoom(undefined); setIsRoomFormOpen(true); }}} disabled={!isAdminAuthenticated}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add Room
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center"><LaptopIconLucide className="mr-2 h-5 w-5" /> Laptops</CardTitle>
+                <CardDescription>Manage laptops in <span className="font-semibold">{currentRoom?.name || "the selected room"}</span>.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={() => { setEditingLaptop(undefined); setLaptopToCreateAtDesk(null); setIsLaptopFormOpen(true); }}
+                  className="w-full mb-4"
+                  disabled={!isAdminAuthenticated || !currentRoomId}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add New Laptop
                 </Button>
-                {currentRoom && (
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => { if (isAdminAuthenticated) {setEditingRoom(currentRoom); setIsRoomFormOpen(true);}}} disabled={!isAdminAuthenticated || !currentRoomId}>
-                    <Edit className="mr-2 h-4 w-4" /> Edit Room
-                  </Button>
-                )}
-              </div>
-               {currentRoom && rooms.length > 1 && (
-                <Button size="sm" variant="destructive" className="w-full" onClick={() => handleDeleteRoom(currentRoom.id)} disabled={!isAdminAuthenticated || !currentRoomId || rooms.length <= 1}>
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete Current Room
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+                <ScrollArea className="h-[200px] pr-3">
+                  {!currentRoomId && <p className="text-sm text-muted-foreground text-center">Select a room to manage laptops.</p>}
+                  {currentRoomId && laptopsInCurrentRoom.length === 0 && <p className="text-sm text-muted-foreground text-center">No laptops in this room.</p>}
+                  
+                  {unassignedLaptopsInCurrentRoom.map(laptop => (
+                    <LaptopItem
+                      key={laptop.id}
+                      laptop={laptop}
+                      assignedStudent={studentsInCurrentRoom.find(s => s.id === laptop.studentId)}
+                      isDraggable={true}
+                      onDragStart={handleDragStart}
+                      onEdit={() => { setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
+                      onDelete={() => handleDeleteLaptop(laptop.id)}
+                      onViewCredentials={() => { setLaptopToView(laptop); setIsViewCredentialsOpen(true); }}
+                      onAssignStudent={() => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true); }}
+                      isAdminAuthenticated={isAdminAuthenticated}
+                    />
+                  ))}
+                   {assignedLaptopsInCurrentRoom.length > 0 && unassignedLaptopsInCurrentRoom.length > 0 && <Separator className="my-3"/>}
+                   {assignedLaptopsInCurrentRoom.map(laptop => (
+                    <LaptopItem
+                      key={laptop.id}
+                      laptop={laptop}
+                      assignedStudent={studentsInCurrentRoom.find(s => s.id === laptop.studentId)}
+                      isDraggable={true}
+                      onDragStart={handleDragStart}
+                      onEdit={() => { setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
+                      onDelete={() => handleDeleteLaptop(laptop.id)}
+                      onViewCredentials={() => { setLaptopToView(laptop); setIsViewCredentialsOpen(true); }}
+                      onAssignStudent={() => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true); }}
+                      onUnassignStudent={laptop.studentId ? () => handleUnassignStudentFromLaptop(laptop.id) : undefined}
+                      onUnassignLocation={() => handleUnassignLocation(laptop.id)}
+                      isAdminAuthenticated={isAdminAuthenticated}
+                    />
+                  ))}
+                </ScrollArea>
+              </CardContent>
+            </Card>
 
-          <Card className="shadow-lg">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-xl flex items-center"><LaptopIconLucide className="mr-2 h-6 w-6 text-primary" />Laptops</CardTitle>
-                <Button size="sm" onClick={() => { if(isAdminAuthenticated) {setLaptopToCreateAtDesk(null); setEditingLaptop(undefined); setIsLaptopFormOpen(true);}}} disabled={!isAdminAuthenticated || !currentRoomId}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add Laptop
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5" /> Students</CardTitle>
+                 <CardDescription>Manage students in <span className="font-semibold">{currentRoom?.name || "the selected room"}</span>.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={() => { setEditingStudent(undefined); setIsStudentFormOpen(true); }}
+                  className="w-full mb-4"
+                  disabled={!isAdminAuthenticated || !currentRoomId}
+                >
+                  <UserPlus className="mr-2 h-4 w-4" /> Add New Student
                 </Button>
-              </div>
-              <CardDescription>Manage laptops for the current room. Drag unassigned laptops to the map.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <h3 className="text-md font-semibold mb-2 text-muted-foreground">Unassigned Laptops</h3>
-              <ScrollArea className="h-[150px] mb-4 p-1 border rounded-md bg-muted/20">
-                {unassignedLaptops.length > 0 ? unassignedLaptops.map(laptop => (
-                  <LaptopItem
-                    key={laptop.id}
-                    laptop={laptop}
-                    isDraggable={isAdminAuthenticated}
-                    onDragStart={handleDragStart}
-                    onEdit={openEditLaptopDialog}
-                    onDelete={() => handleDeleteLaptop(laptop.id)}
-                    onViewCredentials={openViewCredentialsDialog}
-                    onAssignStudent={() => openAssignStudentDialog(laptop)}
-                    isAdminAuthenticated={isAdminAuthenticated}
-                  />
-                )) : <p className="text-sm text-center py-4 text-muted-foreground">No unassigned laptops in this room.</p>}
-              </ScrollArea>
-               <Separator className="my-4" />
-               <h3 className="text-md font-semibold mb-2 text-muted-foreground">Assigned Laptops</h3>
-                <ScrollArea className="h-[150px] p-1 border rounded-md bg-muted/20">
-                 {assignedLaptops.length > 0 ? assignedLaptops.map(laptop => {
-                    const student = studentsInCurrentRoom.find(s => s.id === laptop.studentId);
-                    return (
-                      <LaptopItem
-                        key={laptop.id}
-                        laptop={laptop}
-                        assignedStudent={student}
-                        isDraggable={isAdminAuthenticated}
-                        onDragStart={handleDragStart}
-                        onEdit={openEditLaptopDialog}
-                        onDelete={() => handleDeleteLaptop(laptop.id)}
-                        onViewCredentials={openViewCredentialsDialog}
-                        onAssignStudent={() => openAssignStudentDialog(laptop)}
-                        onUnassignStudent={student ? () => handleUnassignStudent(laptop.id) : undefined}
-                        onUnassignLocation={() => handleUnassignLocation(laptop.id)}
-                        isAdminAuthenticated={isAdminAuthenticated}
-                      />
-                    );
-                  }) : <p className="text-sm text-center py-4 text-muted-foreground">No laptops assigned to desks in this room.</p>}
-              </ScrollArea>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg">
-            <CardHeader>
-               <div className="flex justify-between items-center">
-                <CardTitle className="text-xl flex items-center"><Users className="mr-2 h-6 w-6 text-primary" />Students</CardTitle>
-                <Button size="sm" onClick={() => { if(isAdminAuthenticated) {setEditingStudent(undefined); setIsStudentFormOpen(true);}}} disabled={!isAdminAuthenticated || !currentRoomId}>
-                  <UserPlus className="mr-2 h-4 w-4" /> Add Student
-                </Button>
-              </div>
-              <CardDescription>Manage student information for the current room.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[200px] p-1 border rounded-md bg-muted/20">
-                {studentsInCurrentRoom.length > 0 ? studentsInCurrentRoom.map(student => {
-                  const assignedLaptop = laptopsInCurrentRoom.find(l => l.studentId === student.id);
-                  return (
+                <ScrollArea className="h-[200px] pr-3">
+                  {!currentRoomId && <p className="text-sm text-muted-foreground text-center">Select a room to manage students.</p>}
+                  {currentRoomId && studentsInCurrentRoom.length === 0 && <p className="text-sm text-muted-foreground text-center">No students in this room.</p>}
+                  {studentsInCurrentRoom.map(student => (
                     <StudentItem
                       key={student.id}
                       student={student}
-                      assignedLaptop={assignedLaptop}
-                      onEdit={() => { if(isAdminAuthenticated) {setEditingStudent(student); setIsStudentFormOpen(true);}}}
+                      assignedLaptop={laptopsInCurrentRoom.find(l => l.studentId === student.id)}
+                      onEdit={() => { setEditingStudent(student); setIsStudentFormOpen(true); }}
                       onDelete={() => handleDeleteStudent(student.id)}
                       isAdminAuthenticated={isAdminAuthenticated}
                     />
-                  );
-                }) : <p className="text-sm text-center py-4 text-muted-foreground">No students added to this room yet.</p>}
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </aside>
+                  ))}
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </main>
 
+      <footer className="py-6 md:px-8 md:py-0 border-t">
+        <div className="container flex flex-col items-center justify-center gap-4 md:h-24 md:flex-row">
+          <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
+            &copy; {new Date().getFullYear()} Classroom Navigator. All rights reserved.
+          </p>
+        </div>
+      </footer>
+
       <AdminLoginDialog
-        open={isLoginDialogOpen}
+        open={isLoginDialogOpen && !isAdminAuthenticated}
         onOpenChange={setIsLoginDialogOpen}
         onLogin={handleAdminLogin}
       />
@@ -549,56 +708,55 @@ export default function HomePage() {
         onSubmit={handleAddOrUpdateStudent}
         initialData={editingStudent}
       />
-      {laptopToAssign && currentRoomId && <AssignStudentDialog
+      <AssignStudentDialog
         open={isAssignStudentOpen}
         onOpenChange={setIsAssignStudentOpen}
         laptop={laptopToAssign}
-        students={studentsInCurrentRoom}
-        laptops={laptopsInCurrentRoom} 
-        onAssign={handleAssignStudent}
+        students={studentsInCurrentRoom.filter(s => 
+            !laptopsInCurrentRoom.some(l => l.studentId === s.id && l.id !== laptopToAssign?.id)
+        )}
+        laptops={laptopsInCurrentRoom} // Pass all laptops in current room for context
+        onAssign={handleAssignStudentToLaptop}
         isAdminAuthenticated={isAdminAuthenticated}
-      />}
-      {laptopToView && <ViewCredentialsDialog
+      />
+      <ViewCredentialsDialog
         open={isViewCredentialsOpen}
         onOpenChange={setIsViewCredentialsOpen}
         laptop={laptopToView}
-      />}
-      {currentActionDesk && currentRoomId && <DeskActionModal
+      />
+      <DeskActionModal
         open={isDeskActionModalOpen}
         onOpenChange={setIsDeskActionModalOpen}
         deskActionData={currentActionDesk}
-        onEditLaptop={openEditLaptopDialog}
-        onViewCredentials={openViewCredentialsDialog}
-        onAssignStudent={openAssignStudentDialog}
-        onUnassignStudent={handleUnassignStudent}
-        onSaveNotes={handleSaveLaptopNotes}
-        onAddLaptopToDesk={requestAddLaptopToDesk}
+        onEditLaptop={(laptop) => { setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
+        onViewCredentials={(laptop) => { setLaptopToView(laptop); setIsViewCredentialsOpen(true); }}
+        onAssignStudent={(laptop) => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true); }}
+        onUnassignStudent={handleUnassignStudentFromLaptop}
+        onSaveNotes={handleSaveNotes}
+        onAddLaptopToDesk={(desk) => { 
+            setLaptopToCreateAtDesk(desk); 
+            setEditingLaptop(undefined); 
+            setIsLaptopFormOpen(true); 
+        }}
         isAdminAuthenticated={isAdminAuthenticated}
-      />}
-      <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the {itemToDelete?.type}.
-              {itemToDelete?.type === 'student' ? ' This student will be unassigned from any laptop.' : ''}
-              {itemToDelete?.type === 'room' ? ' All laptops and students in this room will also be deleted.' : ''}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteItem} className="bg-destructive hover:bg-destructive/90" disabled={!isAdminAuthenticated}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <footer className="text-center p-4 text-sm text-muted-foreground border-t">
-        Classroom Navigator &copy; {new Date().getFullYear()}
-      </footer>
+      />
+      {itemToDelete && (
+        <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the {itemToDelete.type}
+                {itemToDelete.type === 'room' && ' and all associated laptops and students'}.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteItem}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
-
-    
