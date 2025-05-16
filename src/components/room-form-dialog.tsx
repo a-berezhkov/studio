@@ -17,7 +17,7 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription as FormDesc, // Renamed to avoid conflict
+  FormDescription as FormDesc, 
   FormField,
   FormItem,
   FormLabel,
@@ -26,19 +26,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { useEffect } from "react";
 
-// Schema for form values, corridors are strings here
 const roomFormValuesSchema = z.object({
-  name: z.string().min(1, { message: "Room name is required." }),
-  rows: z.coerce.number().min(1, { message: "Rows must be at least 1." }).max(10, { message: "Rows cannot exceed 10." }),
-  cols: z.coerce.number().min(1, { message: "Columns must be at least 1." }).max(10, { message: "Columns cannot exceed 10." }),
+  name: z.string().min(1, { message: "Название кабинета обязательно." }),
+  rows: z.coerce.number().min(1, { message: "Количество рядов должно быть не менее 1." }).max(10, { message: "Количество рядов не может превышать 10." }),
+  cols: z.coerce.number().min(1, { message: "Количество колонок должно быть не менее 1." }).max(10, { message: "Количество колонок не может превышать 10." }),
   corridorsAfterRowsInput: z.string().optional().default(""),
   corridorsAfterColsInput: z.string().optional().default(""),
 });
 
-// This type is for the form's data directly
 type RoomFormValues = z.infer<typeof roomFormValuesSchema>;
 
-// This type is for the onSubmit handler, after parsing strings to number[]
 export type RoomSubmitData = Omit<RoomFormValues, 'corridorsAfterRowsInput' | 'corridorsAfterColsInput'> & {
   corridorsAfterRows?: number[];
   corridorsAfterCols?: number[];
@@ -47,11 +44,10 @@ export type RoomSubmitData = Omit<RoomFormValues, 'corridorsAfterRowsInput' | 'c
 interface RoomFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: RoomSubmitData, roomId?: string) => void; // Expects parsed data
-  initialData?: Room; // Room type has number[] for corridors
+  onSubmit: (data: RoomSubmitData, roomId?: string) => void; 
+  initialData?: Room; 
 }
 
-// Helper to convert array of numbers to comma-separated string
 const formatCorridorsToString = (corridors?: number[]): string => {
   return corridors && corridors.length > 0 ? corridors.join(", ") : "";
 };
@@ -87,18 +83,12 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
   }, [initialData, form, open]);
 
   const handleSubmit = (data: RoomFormValues) => {
-    // Parsing logic is now expected to be handled by the parent (page.tsx)
-    // For now, we assume onSubmit can handle RoomFormValues or we adjust its signature
-    // For this iteration, we will pass the string values and let page.tsx parse them.
-    // However, the prompt implies the dialog's onSubmit passes the final structure.
-    // So, let's do the parsing here and define a submit type.
-
     const parseCorridorString = (input: string | undefined, maxDimension: number): number[] => {
       if (!input) return [];
       return input.split(',')
         .map(s => parseInt(s.trim(), 10))
-        .filter(n => !isNaN(n) && n > 0 && n < maxDimension) // Valid corridor if n < max (e.g. for 5 rows, after 1,2,3,4)
-        .sort((a,b) => a-b); // Sort for consistency
+        .filter(n => !isNaN(n) && n > 0 && n < maxDimension) 
+        .sort((a,b) => a-b); 
     };
     
     const submitData: RoomSubmitData = {
@@ -116,9 +106,9 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-card">
         <DialogHeader>
-          <DialogTitle>{initialData ? "Edit Room" : "Add New Room"}</DialogTitle>
+          <DialogTitle>{initialData ? "Редактировать кабинет" : "Добавить новый кабинет"}</DialogTitle>
           <DialogDescription>
-            {initialData ? "Update the room's details and layout." : "Enter the name, dimensions, and specific corridor placements."}
+            {initialData ? "Обновите данные и схему кабинета." : "Введите название, размеры и расположение коридоров."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -128,9 +118,9 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Room Name</FormLabel>
+                  <FormLabel>Название кабинета</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Science Lab, Room 101" {...field} />
+                    <Input placeholder="например, Кабинет химии, Кабинет 101" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -142,9 +132,9 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
                 name="rows"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Number of Desk Rows</FormLabel>
+                    <FormLabel>Количество рядов столов</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 5" {...field} />
+                      <Input type="number" placeholder="например, 5" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -155,9 +145,9 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
                 name="cols"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Number of Desk Columns</FormLabel>
+                    <FormLabel>Количество колонок столов</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 6" {...field} />
+                      <Input type="number" placeholder="например, 6" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -169,11 +159,11 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
               name="corridorsAfterRowsInput"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Corridors After Rows</FormLabel>
+                  <FormLabel>Коридоры после рядов</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., 2, 4 (1-indexed)" {...field} />
+                    <Input placeholder="например, 2, 4 (1-индексированные)" {...field} />
                   </FormControl>
-                  <FormDesc>Comma-separated row numbers after which a corridor should appear. (Max: {form.getValues().rows - 1 || 'N/A'})</FormDesc>
+                  <FormDesc>Номера рядов через запятую, после которых должен появиться коридор. (Макс: {form.getValues().rows - 1 || 'Н/Д'})</FormDesc>
                   <FormMessage />
                 </FormItem>
               )}
@@ -183,18 +173,18 @@ export function RoomFormDialog({ open, onOpenChange, onSubmit, initialData }: Ro
               name="corridorsAfterColsInput"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Corridors After Columns</FormLabel>
+                  <FormLabel>Коридоры после колонок</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., 1, 3 (1-indexed)" {...field} />
+                    <Input placeholder="например, 1, 3 (1-индексированные)" {...field} />
                   </FormControl>
-                   <FormDesc>Comma-separated column numbers after which a corridor should appear. (Max: {form.getValues().cols - 1 || 'N/A'})</FormDesc>
+                   <FormDesc>Номера колонок через запятую, после которых должен появиться коридор. (Макс: {form.getValues().cols - 1 || 'Н/Д'})</FormDesc>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit">{initialData ? "Save Changes" : "Add Room"}</Button>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Отмена</Button>
+              <Button type="submit">{initialData ? "Сохранить изменения" : "Добавить кабинет"}</Button>
             </DialogFooter>
           </form>
         </Form>

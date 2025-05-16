@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Classroom Navigator',
-  description: 'Manage laptops and student assignments in a classroom.',
+  title: 'Навигатор по классу',
+  description: 'Управление ноутбуками и назначениями учащихся в классе.',
 };
 
 export default function RootLayout({
@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ru" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
         {children}
         <Toaster />
@@ -35,3 +35,4 @@ export default function RootLayout({
     </html>
   );
 }
+

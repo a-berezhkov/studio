@@ -81,7 +81,7 @@ export default function HomePage() {
     } else {
        const defaultRoom: Room = { 
         id: DEFAULT_ROOM_ID, 
-        name: "Main Classroom", 
+        name: "Главный класс", 
         rows: 5, 
         cols: 6,
         corridorsAfterRows: [],
@@ -94,7 +94,7 @@ export default function HomePage() {
     if (storedGroups) { // Load or create default group
         setGroups(JSON.parse(storedGroups));
     } else {
-        const defaultGroup: Group = { id: DEFAULT_GROUP_ID, name: "Unassigned" };
+        const defaultGroup: Group = { id: DEFAULT_GROUP_ID, name: "Нераспределенные" };
         setGroups([defaultGroup]);
         defaultGroupCreated = true;
     }
@@ -103,9 +103,9 @@ export default function HomePage() {
       setLaptops(JSON.parse(storedLaptops));
     } else {
         const mockLaptops: Laptop[] = [
-            { id: "laptop-1", login: "Room5-L01", password: "password1", locationId: 1, studentId: "student-1", notes: "This is a note for laptop 1.", roomId: DEFAULT_ROOM_ID },
-            { id: "laptop-2", login: "Room5-L02", password: "password2", locationId: 2, studentId: null, notes: "", roomId: DEFAULT_ROOM_ID },
-            { id: "laptop-3", login: "Room5-L03", password: "password3", locationId: null, studentId: null, notes: "Unassigned laptop note.", roomId: DEFAULT_ROOM_ID },
+            { id: "laptop-1", login: "Kab5-N01", password: "password1", locationId: 1, studentId: "student-1", notes: "Это заметка для ноутбука 1.", roomId: DEFAULT_ROOM_ID },
+            { id: "laptop-2", login: "Kab5-N02", password: "password2", locationId: 2, studentId: null, notes: "", roomId: DEFAULT_ROOM_ID },
+            { id: "laptop-3", login: "Kab5-N03", password: "password3", locationId: null, studentId: null, notes: "Заметка для неназначенного ноутбука.", roomId: DEFAULT_ROOM_ID },
         ];
         setLaptops(mockLaptops);
     }
@@ -113,13 +113,13 @@ export default function HomePage() {
         setStudents(JSON.parse(storedStudents));
     } else {
         const mockStudents: Student[] = [ // Updated mock students with groupId
-            { id: "student-1", name: "Alice Wonderland", groupId: DEFAULT_GROUP_ID },
-            { id: "student-2", name: "Bob The Builder", groupId: DEFAULT_GROUP_ID },
+            { id: "student-1", name: "Алиса Селезнева", groupId: DEFAULT_GROUP_ID },
+            { id: "student-2", name: "Иван Царевич", groupId: DEFAULT_GROUP_ID },
         ];
         setStudents(mockStudents);
     }
     
-    const finalRooms = defaultRoomCreated ? [{ id: DEFAULT_ROOM_ID, name: "Main Classroom", rows: 5, cols: 6, corridorsAfterRows: [], corridorsAfterCols: [] }] : JSON.parse(storedRooms || "[]");
+    const finalRooms = defaultRoomCreated ? [{ id: DEFAULT_ROOM_ID, name: "Главный класс", rows: 5, cols: 6, corridorsAfterRows: [], corridorsAfterCols: [] }] : JSON.parse(storedRooms || "[]");
 
     if (storedCurrentRoomId && finalRooms.find((r: Room) => r.id === storedCurrentRoomId)) {
         setCurrentRoomId(storedCurrentRoomId);
@@ -171,16 +171,16 @@ export default function HomePage() {
     if (login === ADMIN_LOGIN && password_param === ADMIN_PASSWORD) {
       setIsAdminAuthenticated(true);
       setIsLoginDialogOpen(false);
-      toast({ title: "Login Successful", description: "Welcome, Admin!" });
+      toast({ title: "Вход выполнен", description: "Добро пожаловать, Администратор!" });
     } else {
-      toast({ title: "Login Failed", description: "Invalid credentials.", variant: "destructive" });
+      toast({ title: "Ошибка входа", description: "Неверные учетные данные.", variant: "destructive" });
     }
   };
 
   const handleAdminLogout = () => {
     setIsAdminAuthenticated(false);
     setIsLoginDialogOpen(true); 
-    toast({ title: "Logged Out", description: "You have been logged out." });
+    toast({ title: "Выход выполнен", description: "Вы вышли из системы." });
   };
 
   const handleAddOrUpdateRoom = (data: RoomSubmitData, roomId?: string) => {
@@ -207,7 +207,7 @@ export default function HomePage() {
   const handleDeleteRoom = (roomIdToDelete: string) => {
     if (!isAdminAuthenticated) return;
     if (rooms.length <= 1) {
-      toast({ title: "Action Denied", description: "Cannot delete the last room.", variant: "destructive"});
+      toast({ title: "Действие запрещено", description: "Нельзя удалить последний кабинет.", variant: "destructive"});
       setItemToDelete(null);
       return;
     }
@@ -216,12 +216,7 @@ export default function HomePage() {
   
   const confirmDeleteRoom = (roomIdToDelete: string) => {
      if (!isAdminAuthenticated) return;
-     // Laptops and students are no longer directly deleted with room, they are associated with room/group respectively
-     // Laptops belonging to this room should be marked as unassigned from any desk or student maybe?
-     // For now, just filter them out. This might orphan students if their only laptop was in this room.
      setLaptops(prevLaptops => prevLaptops.filter(lap => lap.roomId !== roomIdToDelete));
-     // Students are group-based now, so deleting a room doesn't directly affect students unless a policy is set.
-     // setStudents(prevStudents => prevStudents.filter(stu => stu.roomId !== roomIdToDelete)); // This line removed
      setRooms(prevRooms => {
         const remainingRooms = prevRooms.filter(r => r.id !== roomIdToDelete);
         if (currentRoomId === roomIdToDelete) {
@@ -230,7 +225,7 @@ export default function HomePage() {
         return remainingRooms;
      });
      setItemToDelete(null);
-     toast({ title: "Room Deleted", description: "The room and its laptops have been removed." });
+     toast({ title: "Кабинет удален", description: "Кабинет и все ноутбуки в нем были удалены." });
   }
 
   const handleAddOrUpdateLaptop = (formData: { login: string; password?: string }, laptopId?: string) => {
@@ -272,7 +267,7 @@ export default function HomePage() {
     if (!isAdminAuthenticated || !itemToDelete) return;
     if (itemToDelete.type === 'laptop') {
       setLaptops(laps => laps.filter(lap => lap.id !== itemToDelete.id));
-      toast({ title: "Laptop Deleted", description: "The laptop has been removed." });
+      toast({ title: "Ноутбук удален", description: "Ноутбук был удален." });
     } else if (itemToDelete.type === 'room') {
       confirmDeleteRoom(itemToDelete.id); 
     }
@@ -299,7 +294,7 @@ export default function HomePage() {
     setLaptops(prevLaptops => {
       const droppedLaptop = prevLaptops.find(l => l.id === laptopIdToDrop);
       if (!droppedLaptop || droppedLaptop.roomId !== currentRoomId) {
-        toast({ title: "Error", description: "Cannot move laptop from another room.", variant: "destructive"});
+        toast({ title: "Ошибка", description: "Нельзя переместить ноутбук из другого кабинета.", variant: "destructive"});
         return prevLaptops;
       }
       
@@ -319,11 +314,10 @@ export default function HomePage() {
   };
 
   const handleAssignStudentToLaptop = (laptopId: string, studentId: string) => {
-    if (!isAdminAuthenticated || !currentRoomId) return; // currentRoomId check might be less relevant if assignment is global
+    if (!isAdminAuthenticated) return; 
     
     let newLaptops = [...laptops];
 
-    // Unassign the student from any OTHER laptop they might be on, globally
     newLaptops = newLaptops.map(otherLap => {
       if (otherLap.studentId === studentId && otherLap.id !== laptopId) {
         return { ...otherLap, studentId: null };
@@ -331,9 +325,8 @@ export default function HomePage() {
       return otherLap;
     });
 
-    // Assign student to the target laptop
     newLaptops = newLaptops.map(lap => {
-      if (lap.id === laptopId) { // Ensure it's the correct laptop, roomId check might be removed if truly global
+      if (lap.id === laptopId) { 
         return { ...lap, studentId };
       }
       return lap;
@@ -343,19 +336,19 @@ export default function HomePage() {
     setIsAssignStudentOpen(false);
     setLaptopToAssign(null);
     setIsDeskActionModalOpen(false);
-    toast({ title: "Student Assigned", description: "The student has been assigned to the laptop." });
+    toast({ title: "Учащийся назначен", description: "Учащийся был назначен на ноутбук." });
   };
 
   const handleUnassignStudentFromLaptop = (laptopId: string) => {
-    if (!isAdminAuthenticated || !currentRoomId) return;
+    if (!isAdminAuthenticated) return;
     setLaptops(laps => laps.map(lap => {
-      if (lap.id === laptopId && lap.roomId === currentRoomId) { // Keep roomId check for unassignment target
+      if (lap.id === laptopId) { 
         return { ...lap, studentId: null };
       }
       return lap;
     }));
     setIsDeskActionModalOpen(false);
-    toast({ title: "Student Unassigned", description: "The student has been unassigned." });
+    toast({ title: "Назначение учащегося снято", description: "Назначение учащегося было снято." });
   };
   
   const handleUnassignLocation = (laptopId: string) => {
@@ -366,7 +359,7 @@ export default function HomePage() {
       }
       return lap;
     }));
-    toast({ title: "Laptop Unassigned", description: "The laptop has been unassigned from its desk." });
+    toast({ title: "Ноутбук снят с места", description: "Ноутбук был снят со стола." });
   };
 
   const handleOpenDeskActionModal = (deskId: number) => {
@@ -375,7 +368,6 @@ export default function HomePage() {
     if (!desk) return;
 
     const laptopOnDesk = laptops.find(l => l.roomId === currentRoom.id && l.locationId === deskId);
-    // Student data for display: student is globally identified by studentId
     const studentAssigned = laptopOnDesk && laptopOnDesk.studentId
       ? students.find(s => s.id === laptopOnDesk.studentId) 
       : undefined;
@@ -392,7 +384,7 @@ export default function HomePage() {
       }
       return lap;
     }));
-    toast({ title: "Notes Saved", description: `Notes for laptop updated.` });
+    toast({ title: "Заметки сохранены", description: "Заметки для ноутбука обновлены." });
     if (currentActionDesk?.laptop?.id === laptopId) {
         setCurrentActionDesk(prev => prev ? {...prev, laptop: {...prev.laptop!, notes}} : null);
     }
@@ -405,10 +397,10 @@ export default function HomePage() {
           <div className="container flex h-16 items-center justify-between">
             <div className="flex items-center gap-2">
               <Home className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-bold">Classroom Navigator</h1>
+              <h1 className="text-xl font-bold">Навигатор по классу</h1>
             </div>
             <Button onClick={() => setIsLoginDialogOpen(true)}>
-              <LogIn className="mr-2 h-4 w-4" /> Admin Login
+              <LogIn className="mr-2 h-4 w-4" /> Вход для администратора
             </Button>
           </div>
         </header>
@@ -416,15 +408,15 @@ export default function HomePage() {
           <Card className="p-6 md:p-8 max-w-md shadow-lg">
             <CardHeader>
               <CardTitle className="text-2xl flex items-center justify-center">
-                <ShieldAlert className="mr-2 h-7 w-7 text-destructive" /> Access Restricted
+                <ShieldAlert className="mr-2 h-7 w-7 text-destructive" /> Доступ ограничен
               </CardTitle>
               <CardDescription>
-                Please log in as an administrator to access the application.
+                Пожалуйста, войдите как администратор для доступа к приложению.
               </CardDescription>
             </CardHeader>
             <CardContent>
                 <Button onClick={() => setIsLoginDialogOpen(true)} className="w-full">
-                 <LogIn className="mr-2 h-4 w-4" /> Admin Login
+                 <LogIn className="mr-2 h-4 w-4" /> Вход для администратора
                 </Button>
             </CardContent>
           </Card>
@@ -432,7 +424,7 @@ export default function HomePage() {
         <footer className="py-6 md:px-8 md:py-0 border-t">
           <div className="container flex flex-col items-center justify-center gap-4 md:h-24 md:flex-row">
             <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-              &copy; {new Date().getFullYear()} Classroom Navigator.
+              &copy; {new Date().getFullYear()} Навигатор по классу.
             </p>
           </div>
         </footer>
@@ -446,10 +438,6 @@ export default function HomePage() {
   }
 
   const laptopsInCurrentRoom = laptops.filter(lap => lap.roomId === currentRoomId);
-  // Students assigned to laptops IN THE CURRENT ROOM
-  const studentsAssignedInCurrentRoom = students.filter(stu => 
-    laptopsInCurrentRoom.some(lap => lap.studentId === stu.id)
-  );
   const unassignedLaptopsInCurrentRoom = laptopsInCurrentRoom.filter(lap => !lap.locationId);
   const assignedLaptopsInCurrentRoom = laptopsInCurrentRoom.filter(lap => lap.locationId !== null);
 
@@ -460,23 +448,23 @@ export default function HomePage() {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <Home className="mr-2 h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold">Classroom Navigator {currentRoom ? `- ${currentRoom.name}` : ''}</h1>
+            <h1 className="text-xl font-bold">Навигатор по классу {currentRoom ? `- ${currentRoom.name}` : ''}</h1>
           </div>
           <div className="flex items-center gap-2">
              <Button asChild variant="outline">
               <Link href="/admin/students">
-                <Package className="mr-2 h-4 w-4" /> {/* Changed Icon */}
-                Manage Groups & Students
+                <Package className="mr-2 h-4 w-4" />
+                Управление группами и учащимися
               </Link>
             </Button>
             <Button asChild variant="outline">
               <Link href="/admin/users">
                 <Users className="mr-2 h-4 w-4" />
-                Manage Users
+                Управление пользователями
               </Link>
             </Button>
             <Button onClick={handleAdminLogout} variant="outline">
-              <LogOut className="mr-2 h-4 w-4" /> Admin Logout
+              <LogOut className="mr-2 h-4 w-4" /> Выход администратора
             </Button>
           </div>
         </div>
@@ -486,22 +474,22 @@ export default function HomePage() {
         {!currentRoomId && rooms.length > 0 && (
              <Card className="mb-6">
                 <CardContent className="pt-6 text-center">
-                    <p className="text-lg font-semibold">Welcome, Admin!</p>
-                    <p className="text-muted-foreground">Please select a room to get started, or add a new one.</p>
+                    <p className="text-lg font-semibold">Добро пожаловать, Администратор!</p>
+                    <p className="text-muted-foreground">Пожалуйста, выберите кабинет для начала работы или добавьте новый.</p>
                 </CardContent>
              </Card>
         )}
         {!currentRoomId && rooms.length === 0 && (
              <Card className="mb-6">
                 <CardContent className="pt-6 text-center">
-                    <p className="text-lg font-semibold">No Rooms Available</p>
-                    <p className="text-muted-foreground">Please add a new room to begin managing your classroom.</p>
+                    <p className="text-lg font-semibold">Нет доступных кабинетов</p>
+                    <p className="text-muted-foreground">Пожалуйста, добавьте новый кабинет, чтобы начать управление классом.</p>
                      <Button
                         onClick={() => { setEditingRoom(undefined); setIsRoomFormOpen(true); }}
                         className="mt-4"
                         disabled={!isAdminAuthenticated}
                       >
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add First Room
+                        <PlusCircle className="mr-2 h-4 w-4" /> Добавить первый кабинет
                       </Button>
                 </CardContent>
              </Card>
@@ -512,8 +500,8 @@ export default function HomePage() {
               <ClassroomLayout
                 desks={desks}
                 laptops={assignedLaptopsInCurrentRoom}
-                students={students} // Pass all students; layout component can find assigned ones by ID
-                groups={groups} // Pass groups for display if needed
+                students={students} 
+                groups={groups} 
                 onDropLaptopOnDesk={handleDropLaptopOnDesk}
                 onDeskClick={(deskId) => handleOpenDeskActionModal(deskId)}
                 rows={currentRoom.rows}
@@ -526,7 +514,7 @@ export default function HomePage() {
               <Card className="h-[400px] flex items-center justify-center bg-muted/20 border-dashed">
                 <CardContent className="text-center">
                    <Home className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-4" />
-                  <p className="text-muted-foreground">Select or create a room to view the layout.</p>
+                  <p className="text-muted-foreground">Выберите или создайте кабинет для просмотра схемы.</p>
                 </CardContent>
               </Card>
             )}
@@ -535,12 +523,12 @@ export default function HomePage() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center"><Home className="mr-2 h-5 w-5" /> Room Management</CardTitle>
-                <CardDescription>Select, add, or edit classroom rooms.</CardDescription>
+                <CardTitle className="flex items-center"><Home className="mr-2 h-5 w-5" /> Управление кабинетами</CardTitle>
+                <CardDescription>Выберите, добавьте или отредактируйте кабинеты.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1">
-                  <Label htmlFor="room-select">Current Room</Label>
+                  <Label htmlFor="room-select">Текущий кабинет</Label>
                   <Select
                     value={currentRoomId || ""}
                     onValueChange={(value) => {
@@ -554,15 +542,15 @@ export default function HomePage() {
                     disabled={!isAdminAuthenticated || rooms.length === 0 && !currentRoomId}
                   >
                     <SelectTrigger id="room-select">
-                      <SelectValue placeholder="Select a room" />
+                      <SelectValue placeholder="Выберите кабинет" />
                     </SelectTrigger>
                     <SelectContent>
                       {rooms.map(room => (
                         <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
                       ))}
-                       {rooms.length === 0 && <SelectItem value="" disabled>No rooms available</SelectItem>}
+                       {rooms.length === 0 && <SelectItem value="" disabled>Нет доступных кабинетов</SelectItem>}
                        <SelectItem value="__add_new_room__" className="text-primary hover:!bg-primary/10">
-                          <PlusCircle className="inline-block mr-2 h-4 w-4" /> Add new room...
+                          <PlusCircle className="inline-block mr-2 h-4 w-4" /> Добавить новый кабинет...
                        </SelectItem>
                     </SelectContent>
                   </Select>
@@ -573,7 +561,7 @@ export default function HomePage() {
                     className="flex-1"
                     disabled={!isAdminAuthenticated}
                   >
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Room
+                    <PlusCircle className="mr-2 h-4 w-4" /> Добавить кабинет
                   </Button>
                   {currentRoom && (
                     <Button
@@ -582,7 +570,7 @@ export default function HomePage() {
                       className="flex-1"
                       disabled={!isAdminAuthenticated}
                     >
-                      <Edit className="mr-2 h-4 w-4" /> Edit Room
+                      <Edit className="mr-2 h-4 w-4" /> Редактировать кабинет
                     </Button>
                   )}
                 </div>
@@ -593,7 +581,7 @@ export default function HomePage() {
                         className="w-full"
                         disabled={!isAdminAuthenticated}
                     >
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete Room
+                        <Trash2 className="mr-2 h-4 w-4" /> Удалить кабинет
                     </Button>
                 )}
               </CardContent>
@@ -601,8 +589,8 @@ export default function HomePage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center"><LaptopIconLucide className="mr-2 h-5 w-5" /> Laptops</CardTitle>
-                <CardDescription>Manage laptops in <span className="font-semibold">{currentRoom?.name || "the selected room"}</span>.</CardDescription>
+                <CardTitle className="flex items-center"><LaptopIconLucide className="mr-2 h-5 w-5" /> Ноутбуки</CardTitle>
+                <CardDescription>Управление ноутбуками в <span className="font-semibold">{currentRoom?.name || "выбранном кабинете"}</span>.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Button
@@ -610,18 +598,18 @@ export default function HomePage() {
                   className="w-full mb-4"
                   disabled={!isAdminAuthenticated || !currentRoomId}
                 >
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add New Laptop
+                  <PlusCircle className="mr-2 h-4 w-4" /> Добавить новый ноутбук
                 </Button>
                 <ScrollArea className="h-[200px] pr-3">
-                  {!currentRoomId && <p className="text-sm text-muted-foreground text-center">Select a room to manage laptops.</p>}
-                  {currentRoomId && laptopsInCurrentRoom.length === 0 && <p className="text-sm text-muted-foreground text-center">No laptops in this room.</p>}
+                  {!currentRoomId && <p className="text-sm text-muted-foreground text-center">Выберите кабинет для управления ноутбуками.</p>}
+                  {currentRoomId && laptopsInCurrentRoom.length === 0 && <p className="text-sm text-muted-foreground text-center">В этом кабинете нет ноутбуков.</p>}
                   
                   {unassignedLaptopsInCurrentRoom.map(laptop => (
                     <LaptopItem
                       key={laptop.id}
                       laptop={laptop}
-                      assignedStudent={students.find(s => s.id === laptop.studentId)} // Find from all students
-                      groups={groups} // Pass groups for student group name lookup
+                      assignedStudent={students.find(s => s.id === laptop.studentId)} 
+                      groups={groups} 
                       isDraggable={true}
                       onDragStart={handleDragStart}
                       onEdit={() => { setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
@@ -636,8 +624,8 @@ export default function HomePage() {
                     <LaptopItem
                       key={laptop.id}
                       laptop={laptop}
-                      assignedStudent={students.find(s => s.id === laptop.studentId)} // Find from all students
-                      groups={groups} // Pass groups for student group name lookup
+                      assignedStudent={students.find(s => s.id === laptop.studentId)} 
+                      groups={groups} 
                       isDraggable={true}
                       onDragStart={handleDragStart}
                       onEdit={() => { setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
@@ -659,7 +647,7 @@ export default function HomePage() {
       <footer className="py-6 md:px-8 md:py-0 border-t">
         <div className="container flex flex-col items-center justify-center gap-4 md:h-24 md:flex-row">
           <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-            &copy; {new Date().getFullYear()} Classroom Navigator. All rights reserved.
+            &copy; {new Date().getFullYear()} Навигатор по классу. Все права защищены.
           </p>
         </div>
       </footer>
@@ -685,8 +673,8 @@ export default function HomePage() {
         open={isAssignStudentOpen}
         onOpenChange={setIsAssignStudentOpen}
         laptop={laptopToAssign}
-        students={students} // Pass all students
-        groups={groups} // Pass all groups
+        students={students} 
+        groups={groups} 
         laptops={laptops} 
         onAssign={handleAssignStudentToLaptop}
         isAdminAuthenticated={isAdminAuthenticated}
@@ -710,22 +698,22 @@ export default function HomePage() {
             setEditingLaptop(undefined); 
             setIsLaptopFormOpen(true); 
         }}
-        groups={groups} // Pass groups for student display in modal
+        groups={groups} 
         isAdminAuthenticated={isAdminAuthenticated}
       />
       {itemToDelete && (
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the {itemToDelete.type}
-                {itemToDelete.type === 'room' && ' and all laptops within it'}.
+                Это действие необратимо. Это навсегда удалит {itemToDelete.type === 'laptop' ? 'ноутбук' : 'кабинет'}
+                {itemToDelete.type === 'room' && ' и все ноутбуки в нем'}.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDeleteItem} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+              <AlertDialogCancel onClick={() => setItemToDelete(null)}>Отмена</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteItem} className="bg-destructive hover:bg-destructive/90">Удалить</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

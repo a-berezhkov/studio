@@ -71,10 +71,10 @@ export function AssignStudentDialog({
       if (currentStudent) {
         setSelectedGroupId(currentStudent.groupId);
         setSelectedStudentId(currentStudent.id);
-        setSearchTerm(""); // Reset search term if student is pre-selected
+        setSearchTerm(""); 
       }
     } else if (open) {
-      setSelectedGroupId(groups[0]?.id || undefined); // Default to first group or undefined
+      setSelectedGroupId(groups[0]?.id || undefined); 
       setSelectedStudentId(undefined);
       setSearchTerm("");
     }
@@ -93,27 +93,27 @@ export function AssignStudentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-card">
         <DialogHeader>
-          <DialogTitle>Assign Student to Laptop: {laptop.login}</DialogTitle>
+          <DialogTitle>Назначить учащегося на ноутбук: {laptop.login}</DialogTitle>
           <DialogDescription>
-            Select a group, then search and select a student. Only students not already assigned to a laptop will be available.
+            Выберите группу, затем найдите и выберите учащегося. Будут доступны только учащиеся, еще не назначенные на ноутбук.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="group-select" className="text-right">
-              Group
+              Группа
             </Label>
             <Select 
               value={selectedGroupId} 
               onValueChange={(value) => {
                 setSelectedGroupId(value);
-                setSelectedStudentId(undefined); // Reset student if group changes
+                setSelectedStudentId(undefined); 
                 setSearchTerm("");
               }}
               disabled={!isAdminAuthenticated || groups.length === 0}
             >
               <SelectTrigger id="group-select" className="col-span-3">
-                <SelectValue placeholder="Select a group" />
+                <SelectValue placeholder="Выберите группу" />
               </SelectTrigger>
               <SelectContent>
                 {groups.length > 0 ? (
@@ -123,7 +123,7 @@ export function AssignStudentDialog({
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem value="no-groups" disabled>No groups available</SelectItem>
+                  <SelectItem value="no-groups" disabled>Нет доступных групп</SelectItem>
                 )}
               </SelectContent>
             </Select>
@@ -133,15 +133,15 @@ export function AssignStudentDialog({
             <>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="student-search" className="text-right">
-                  Search Student
+                  Поиск учащегося
                 </Label>
                 <Input
                   id="student-search"
-                  placeholder="Type to search by name..."
+                  placeholder="Введите для поиска по имени..."
                   value={searchTerm}
                   onChange={(e) => {
                     setSearchTerm(e.target.value);
-                    setSelectedStudentId(undefined); // Reset if search term changes
+                    setSelectedStudentId(undefined); 
                   }}
                   className="col-span-3"
                   disabled={!isAdminAuthenticated}
@@ -149,7 +149,7 @@ export function AssignStudentDialog({
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="student-select" className="text-right">
-                  Student
+                  Учащийся
                 </Label>
                 <Select 
                   value={selectedStudentId} 
@@ -157,7 +157,7 @@ export function AssignStudentDialog({
                   disabled={!isAdminAuthenticated || availableStudentsToDisplay.length === 0}
                 >
                   <SelectTrigger id="student-select" className="col-span-3">
-                    <SelectValue placeholder="Select a student" />
+                    <SelectValue placeholder="Выберите учащегося" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableStudentsToDisplay.length > 0 ? (
@@ -168,7 +168,7 @@ export function AssignStudentDialog({
                       ))
                     ) : (
                       <SelectItem value="no-students" disabled>
-                        {searchTerm ? "No matching students" : "No available students in this group"}
+                        {searchTerm ? "Совпадающих учащихся не найдено" : "В этой группе нет доступных учащихся"}
                       </SelectItem>
                     )}
                   </SelectContent>
@@ -178,8 +178,8 @@ export function AssignStudentDialog({
           )}
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleAssign} disabled={!selectedStudentId || !isAdminAuthenticated}>Assign Student</Button>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Отмена</Button>
+          <Button onClick={handleAssign} disabled={!selectedStudentId || !isAdminAuthenticated}>Назначить учащегося</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

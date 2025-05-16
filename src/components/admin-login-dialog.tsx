@@ -34,15 +34,15 @@ export function AdminLoginDialog({ open, onOpenChange, onLogin }: AdminLoginDial
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] bg-card">
         <DialogHeader>
-          <DialogTitle>Admin Login</DialogTitle>
+          <DialogTitle>Вход для администратора</DialogTitle>
           <DialogDescription>
-            Enter admin credentials to manage the application.
+            Введите учетные данные администратора для управления приложением.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="admin-login-username" className="text-right">
-              Username
+              Имя пользователя
             </Label>
             <Input
               id="admin-login-username"
@@ -54,7 +54,7 @@ export function AdminLoginDialog({ open, onOpenChange, onLogin }: AdminLoginDial
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="admin-login-password" className="text-right">
-              Password
+              Пароль
             </Label>
             <Input
               id="admin-login-password"
@@ -68,15 +68,13 @@ export function AdminLoginDialog({ open, onOpenChange, onLogin }: AdminLoginDial
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            Отмена
           </Button>
           <Button onClick={handleLoginAttempt}>
-            <LogIn className="mr-2 h-4 w-4" /> Login
+            <LogIn className="mr-2 h-4 w-4" /> Войти
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-    

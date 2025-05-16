@@ -27,8 +27,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useEffect } from "react";
 
 const studentFormSchema = z.object({
-  name: z.string().min(1, { message: "Student name is required." }),
-  groupId: z.string().min(1, { message: "Group is required." }),
+  name: z.string().min(1, { message: "Имя учащегося обязательно." }),
+  groupId: z.string().min(1, { message: "Группа обязательна." }),
 });
 
 type StudentFormValues = z.infer<typeof studentFormSchema>;
@@ -38,7 +38,7 @@ interface StudentFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: StudentFormValues, studentId?: string) => void;
   initialData?: Student;
-  groups: Group[]; // Added groups prop
+  groups: Group[]; 
 }
 
 export function StudentFormDialog({ open, onOpenChange, onSubmit, initialData, groups }: StudentFormDialogProps) {
@@ -66,9 +66,9 @@ export function StudentFormDialog({ open, onOpenChange, onSubmit, initialData, g
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] bg-card">
         <DialogHeader>
-          <DialogTitle>{initialData ? "Edit Student" : "Add New Student"}</DialogTitle>
+          <DialogTitle>{initialData ? "Редактировать учащегося" : "Добавить нового учащегося"}</DialogTitle>
           <DialogDescription>
-            {initialData ? "Update the student's details and group." : "Enter the name and assign a group for the new student."}
+            {initialData ? "Обновите данные учащегося и его группу." : "Введите имя и назначьте группу для нового учащегося."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -78,9 +78,9 @@ export function StudentFormDialog({ open, onOpenChange, onSubmit, initialData, g
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Full Name</FormLabel>
+                  <FormLabel>Полное имя</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., John Doe" {...field} />
+                    <Input placeholder="например, Иван Иванов" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -91,15 +91,15 @@ export function StudentFormDialog({ open, onOpenChange, onSubmit, initialData, g
               name="groupId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Group</FormLabel>
+                  <FormLabel>Группа</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                     <FormControl>
                       <SelectTrigger disabled={groups.length === 0}>
-                        <SelectValue placeholder="Select a group" />
+                        <SelectValue placeholder="Выберите группу" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {groups.length === 0 && <SelectItem value="" disabled>No groups available. Please add a group first.</SelectItem>}
+                      {groups.length === 0 && <SelectItem value="" disabled>Нет доступных групп. Пожалуйста, сначала добавьте группу.</SelectItem>}
                       {groups.map(group => (
                         <SelectItem key={group.id} value={group.id}>
                           {group.name}
@@ -112,8 +112,8 @@ export function StudentFormDialog({ open, onOpenChange, onSubmit, initialData, g
               )}
             />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={groups.length === 0}>{initialData ? "Save Changes" : "Add Student"}</Button>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Отмена</Button>
+              <Button type="submit" disabled={groups.length === 0}>{initialData ? "Сохранить изменения" : "Добавить учащегося"}</Button>
             </DialogFooter>
           </form>
         </Form>

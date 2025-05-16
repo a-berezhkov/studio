@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { useEffect } from "react";
 
 const groupFormSchema = z.object({
-  name: z.string().min(1, { message: "Group name is required." }),
+  name: z.string().min(1, { message: "Название группы обязательно." }),
 });
 
 type GroupFormValues = z.infer<typeof groupFormSchema>;
@@ -63,9 +63,9 @@ export function GroupFormDialog({ open, onOpenChange, onSubmit, initialData }: G
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] bg-card">
         <DialogHeader>
-          <DialogTitle>{initialData ? "Edit Group" : "Add New Group"}</DialogTitle>
+          <DialogTitle>{initialData ? "Редактировать группу" : "Добавить новую группу"}</DialogTitle>
           <DialogDescription>
-            {initialData ? "Update the group's name." : "Enter the name for the new group."}
+            {initialData ? "Обновите название группы." : "Введите название для новой группы."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -75,17 +75,17 @@ export function GroupFormDialog({ open, onOpenChange, onSubmit, initialData }: G
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Group Name</FormLabel>
+                  <FormLabel>Название группы</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Morning Class, Advanced Batch" {...field} />
+                    <Input placeholder="например, Утренний класс, Продвинутая группа" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit">{initialData ? "Save Changes" : "Add Group"}</Button>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Отмена</Button>
+              <Button type="submit">{initialData ? "Сохранить изменения" : "Добавить группу"}</Button>
             </DialogFooter>
           </form>
         </Form>

@@ -31,30 +31,30 @@ export function ViewCredentialsDialog({ open, onOpenChange, laptop }: ViewCreden
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] bg-card">
         <DialogHeader>
-          <DialogTitle>Laptop Credentials: {laptop.login}</DialogTitle>
+          <DialogTitle>Учетные данные ноутбука: {laptop.login}</DialogTitle>
           <DialogDescription>
-            Login credentials for the selected laptop.
+            Учетные данные для выбранного ноутбука.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="login" className="text-right">
-              Login
+              Логин
             </Label>
             <Input id="login" value={laptop.login} readOnly className="col-span-3" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="password" className="text-right">
-              Password
+              Пароль
             </Label>
             <div className="col-span-3 relative">
-              <Input id="password" type={showPassword ? "text" : "password"} value={laptop.password || "N/A"} readOnly />
+              <Input id="password" type={showPassword ? "text" : "password"} value={laptop.password || "Н/Д"} readOnly />
               <Button 
                 variant="ghost" 
                 size="icon" 
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
@@ -62,7 +62,7 @@ export function ViewCredentialsDialog({ open, onOpenChange, laptop }: ViewCreden
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>Close</Button>
+          <Button onClick={() => onOpenChange(false)}>Закрыть</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

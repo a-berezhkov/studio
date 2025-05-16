@@ -37,7 +37,7 @@ export default function AdminStudentsGroupsPage() {
 
     if (storedGroups) setGroups(JSON.parse(storedGroups));
     else {
-        const defaultGroup: Group = {id: 'group-default', name: 'Unassigned'};
+        const defaultGroup: Group = {id: 'group-default', name: 'Нераспределенные'};
         setGroups([defaultGroup]);
     }
     if (storedStudents) setAllStudents(JSON.parse(storedStudents));
@@ -73,7 +73,7 @@ export default function AdminStudentsGroupsPage() {
     setGroups(updatedGroups);
     setEditingGroup(undefined);
     setIsGroupFormOpen(false);
-    toast({ title: groupId ? "Group Updated" : "Group Added", description: `Group ${data.name} has been ${groupId ? 'updated' : 'added'}.` });
+    toast({ title: groupId ? "Группа обновлена" : "Группа добавлена", description: `Группа "${data.name}" была ${groupId ? 'обновлена' : 'добавлена'}.` });
   };
 
   const handleDeleteGroup = (groupId: string) => {
@@ -82,11 +82,11 @@ export default function AdminStudentsGroupsPage() {
 
     const studentsInGroup = allStudents.filter(s => s.groupId === groupId);
     if (studentsInGroup.length > 0) {
-      toast({ title: "Action Denied", description: `Cannot delete group "${group.name}" as it contains students. Please move or delete students first.`, variant: "destructive"});
+      toast({ title: "Действие запрещено", description: `Невозможно удалить группу "${group.name}", так как она содержит учащихся. Пожалуйста, сначала переместите или удалите учащихся.`, variant: "destructive"});
       return;
     }
     if (groups.length <= 1 && group.id === 'group-default') {
-        toast({ title: "Action Denied", description: `Cannot delete the default 'Unassigned' group if it's the only one.`, variant: "destructive"});
+        toast({ title: "Действие запрещено", description: `Невозможно удалить группу по умолчанию "Нераспределенные", если она единственная.`, variant: "destructive"});
         return;
     }
     setItemToDelete({ type: 'group', id: groupId, name: group.name });
@@ -96,7 +96,7 @@ export default function AdminStudentsGroupsPage() {
     if (!itemToDelete || itemToDelete.type !== 'group') return;
     const updatedGroups = groups.filter(grp => grp.id !== itemToDelete!.id);
     setGroups(updatedGroups);
-    toast({ title: "Group Deleted", description: `Group "${itemToDelete.name || itemToDelete.id}" has been removed.` });
+    toast({ title: "Группа удалена", description: `Группа "${itemToDelete.name || itemToDelete.id}" была удалена.` });
     setItemToDelete(null);
   };
 
@@ -118,7 +118,7 @@ export default function AdminStudentsGroupsPage() {
     setAllStudents(updatedStudents);
     setEditingStudent(undefined);
     setIsStudentFormOpen(false);
-    toast({ title: studentId ? "Student Updated" : "Student Added", description: `Student ${data.name} has been ${studentId ? 'updated' : 'added'}.` });
+    toast({ title: studentId ? "Учащийся обновлен" : "Учащийся добавлен", description: `Учащийся "${data.name}" был ${studentId ? 'обновлен' : 'добавлен'}.` });
   };
 
   const handleDeleteStudent = (studentId: string) => {
@@ -140,7 +140,7 @@ export default function AdminStudentsGroupsPage() {
     const updatedStudents = allStudents.filter(stu => stu.id !== itemToDelete!.id);
     setAllStudents(updatedStudents);
     
-    toast({ title: "Student Deleted", description: `Student ${studentName} has been removed.` });
+    toast({ title: "Учащийся удален", description: `Учащийся "${studentName}" был удален.` });
     setItemToDelete(null);
   };
   
@@ -159,12 +159,12 @@ export default function AdminStudentsGroupsPage() {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <Users2 className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold">Group & Student Management</h1>
+            <h1 className="text-xl font-bold">Управление группами и учащимися</h1>
           </div>
           <Button asChild variant="outline">
             <Link href="/">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Classroom
+              Вернуться в класс
             </Link>
           </Button>
         </div>
@@ -177,19 +177,19 @@ export default function AdminStudentsGroupsPage() {
             <Card className="shadow-md">
               <CardHeader>
                 <div className="flex justify-between items-center">
-                    <CardTitle className="flex items-center"><Package className="mr-2 h-5 w-5"/>Groups</CardTitle>
+                    <CardTitle className="flex items-center"><Package className="mr-2 h-5 w-5"/>Группы</CardTitle>
                     <Button
                         onClick={() => { setEditingGroup(undefined); setIsGroupFormOpen(true); }}
                         size="sm"
                         variant="outline"
                     >
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add Group
+                        <PlusCircle className="mr-2 h-4 w-4" /> Добавить группу
                     </Button>
                 </div>
-                <CardDescription>Manage student groups. All actions are saved automatically.</CardDescription>
+                <CardDescription>Управляйте группами учащихся. Все действия сохраняются автоматически.</CardDescription>
               </CardHeader>
               <CardContent>
-                {groups.length === 0 && <p className="text-sm text-muted-foreground text-center">No groups available. Click "Add Group" to begin.</p>}
+                {groups.length === 0 && <p className="text-sm text-muted-foreground text-center">Нет доступных групп. Нажмите "Добавить группу", чтобы начать.</p>}
                 <ScrollArea className="h-[calc(100vh-450px)] min-h-[200px] pr-3">
                   {groups.map(group => (
                     <Card key={group.id} className="mb-3">
@@ -218,22 +218,22 @@ export default function AdminStudentsGroupsPage() {
             <Card className="shadow-md">
               <CardHeader>
                 <div className="flex justify-between items-center">
-                    <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5"/>Students</CardTitle>
+                    <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5"/>Учащиеся</CardTitle>
                     <Button
                         onClick={() => { setEditingStudent(undefined); setIsStudentFormOpen(true); }}
                         disabled={groups.length === 0}
                     >
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Student
+                        <PlusCircle className="mr-2 h-4 w-4" /> Добавить нового учащегося
                     </Button>
                 </div>
-                <CardDescription>Add, edit, or remove students. Assign them to groups.</CardDescription>
+                <CardDescription>Добавляйте, редактируйте или удаляйте учащихся. Назначайте их в группы.</CardDescription>
               </CardHeader>
               <CardContent>
                 {groups.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">Please add a group first to start managing students.</p>
+                    <p className="text-center text-muted-foreground py-8">Пожалуйста, сначала добавьте группу, чтобы начать управление учащимися.</p>
                 )}
                 {groups.length > 0 && allStudents.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">No students added yet. Click "Add New Student" to begin.</p>
+                    <p className="text-center text-muted-foreground py-8">Учащиеся еще не добавлены. Нажмите "Добавить нового учащегося", чтобы начать.</p>
                 )}
 
                 {groups.length > 0 && allStudents.length > 0 && (
@@ -247,17 +247,17 @@ export default function AdminStudentsGroupsPage() {
                                 <div className="flex items-center gap-2">
                                     <Package className="h-5 w-5 text-muted-foreground"/>
                                     <span className="font-semibold">{group.name}</span> 
-                                    <span className="text-xs text-muted-foreground">({studentsInGroup.length} student{studentsInGroup.length !== 1 ? 's' : ''})</span>
+                                    <span className="text-xs text-muted-foreground">({studentsInGroup.length} уч.)</span>
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent className="pl-2 pr-1">
-                              {studentsInGroup.length === 0 && <p className="text-sm text-muted-foreground p-4 text-center">No students in this group.</p>}
+                              {studentsInGroup.length === 0 && <p className="text-sm text-muted-foreground p-4 text-center">В этой группе нет учащихся.</p>}
                               {studentsInGroup.map(student => (
                                 <StudentItem
                                   key={student.id}
                                   student={student}
                                   assignedLaptop={allLaptops.find(l => l.studentId === student.id)}
-                                  groupName={group.name} // Pass group name for display
+                                  groupName={group.name} 
                                   onEdit={() => { setEditingStudent(student); setIsStudentFormOpen(true); }}
                                   onDelete={() => handleDeleteStudent(student.id)}
                                   isAdminAuthenticated={true} // Assuming this page is admin-only
@@ -279,7 +279,7 @@ export default function AdminStudentsGroupsPage() {
       <footer className="py-6 md:px-8 md:py-0 border-t">
         <div className="container flex flex-col items-center justify-center gap-4 md:h-24 md:flex-row">
           <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-            &copy; {new Date().getFullYear()} Classroom Navigator. Student & Group Management.
+            &copy; {new Date().getFullYear()} Навигатор по классу. Управление учащимися и группами.
           </p>
         </div>
       </footer>
@@ -295,24 +295,24 @@ export default function AdminStudentsGroupsPage() {
         onOpenChange={setIsStudentFormOpen}
         onSubmit={handleAddOrUpdateStudent}
         initialData={editingStudent}
-        groups={groups} // Pass groups for selection
+        groups={groups} 
       />
 
       {itemToDelete && (
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete {itemToDelete.type} <span className="font-semibold">{itemToDelete.name || 'this item'}</span>.
-                {itemToDelete.type === 'student' && ' They will also be unassigned from any laptop.'}
-                {itemToDelete.type === 'group' && ' Ensure no students are in this group before deleting.'}
+                Это действие необратимо. Это навсегда удалит {itemToDelete.type === 'student' ? 'учащегося' : 'группу'} <span className="font-semibold">"{itemToDelete.name || 'этот элемент'}"</span>.
+                {itemToDelete.type === 'student' && ' Он также будет снят с назначения на любой ноутбук.'}
+                {itemToDelete.type === 'group' && ' Убедитесь, что в этой группе нет учащихся перед удалением.'}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel onClick={() => setItemToDelete(null)}>Отмена</AlertDialogCancel>
               <AlertDialogAction onClick={confirmDeleteItem} className="bg-destructive hover:bg-destructive/90">
-                Delete {itemToDelete.type === 'student' ? 'Student' : 'Group'}
+                {itemToDelete.type === 'student' ? 'Удалить учащегося' : 'Удалить группу'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

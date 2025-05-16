@@ -2,9 +2,9 @@
 "use client";
 
 import type { DragEvent } from "react";
-import type { Laptop, Student, Desk, Group } from "@/lib/types"; // Added Group
+import type { Laptop, Student, Desk, Group } from "@/lib/types"; 
 import { cn } from "@/lib/utils";
-import { Laptop as LaptopIcon, User as UserIcon, Computer, Package } from "lucide-react"; // Added Package
+import { Laptop as LaptopIcon, User as UserIcon, Computer, Package } from "lucide-react"; 
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -12,7 +12,7 @@ interface DeskCellProps {
   desk: Desk;
   laptop?: Laptop;
   student?: Student;
-  group?: Group; // Added group
+  group?: Group; 
   onDrop: (laptopId: string) => void;
   onClick: () => void;
   canDrop?: boolean;
@@ -40,9 +40,9 @@ export function DeskCell({ desk, laptop, student, group, onDrop, onClick, canDro
 
   const hasLaptop = !!laptop;
   const tooltipContent = [];
-  if (laptop) tooltipContent.push(`Laptop: ${laptop.login}`);
-  if (student) tooltipContent.push(`Student: ${student.name}`);
-  if (group) tooltipContent.push(`Group: ${group.name}`);
+  if (laptop) tooltipContent.push(`Ноутбук: ${laptop.login}`);
+  if (student) tooltipContent.push(`Учащийся: ${student.name}`);
+  if (group) tooltipContent.push(`Группа: ${group.name}`);
 
 
   return (
@@ -57,7 +57,7 @@ export function DeskCell({ desk, laptop, student, group, onDrop, onClick, canDro
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         onClick={onClick}
-        aria-label={`Desk ${desk.id}${laptop ? `, occupied by laptop ${laptop.login}` : ', empty'}`}
+        aria-label={`Стол ${desk.id}${laptop ? `, занят ноутбуком ${laptop.login}` : ', пустой'}`}
         tabIndex={onClick ? 0 : -1} 
         onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onClick) onClick(); }}
       >
@@ -103,7 +103,7 @@ export function DeskCell({ desk, laptop, student, group, onDrop, onClick, canDro
               </Tooltip>
             )}
           </div>
-           {laptop && (!student || !group) && (
+           {laptop && (!student || !group) && ( // Keep consistent spacing if student/group is missing
              <div className="w-4 h-4 md:w-5 md:h-5" /> 
           )}
         </CardContent>

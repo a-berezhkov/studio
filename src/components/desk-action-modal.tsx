@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Laptop, Student, Desk, Group } from "@/lib/types"; // Added Group
+import type { Laptop, Student, Desk, Group } from "@/lib/types"; 
 import type { DeskActionData } from "@/app/page"; 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
-import { Laptop as LaptopIcon, User, Edit, KeyRound, StickyNote, PlusCircle, UserMinus, Package } from "lucide-react"; // Added Package
+import { Laptop as LaptopIcon, User, Edit, KeyRound, StickyNote, PlusCircle, UserMinus, Package } from "lucide-react"; 
 
 interface DeskActionModalProps {
   open: boolean;
@@ -29,7 +29,7 @@ interface DeskActionModalProps {
   onUnassignStudent: (laptopId: string) => void;
   onSaveNotes: (laptopId: string, notes: string) => void;
   onAddLaptopToDesk: (desk: Desk) => void;
-  groups: Group[]; // Added groups
+  groups: Group[]; 
   isAdminAuthenticated: boolean;
 }
 
@@ -43,7 +43,7 @@ export function DeskActionModal({
   onUnassignStudent,
   onSaveNotes,
   onAddLaptopToDesk,
-  groups, // Added groups
+  groups, 
   isAdminAuthenticated,
 }: DeskActionModalProps) {
   const [currentNotes, setCurrentNotes] = useState("");
@@ -71,14 +71,14 @@ export function DeskActionModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-card">
         <DialogHeader>
-          <DialogTitle>Desk {desk.id} Actions</DialogTitle>
+          <DialogTitle>Действия для стола {desk.id}</DialogTitle>
           {laptop ? (
             <DialogDescription>
-              Manage laptop <span className="font-semibold">{laptop.login}</span>
-              {student ? ` assigned to ${student.name}${studentGroup ? ` (Group: ${studentGroup.name})` : ''}.` : "."}
+              Управление ноутбуком <span className="font-semibold">{laptop.login}</span>
+              {student ? ` назначенным учащемуся ${student.name}${studentGroup ? ` (Группа: ${studentGroup.name})` : ''}.` : "."}
             </DialogDescription>
           ) : (
-            <DialogDescription>This desk is currently empty.</DialogDescription>
+            <DialogDescription>Этот стол в данный момент пуст.</DialogDescription>
           )}
         </DialogHeader>
 
@@ -87,14 +87,14 @@ export function DeskActionModal({
             <>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
-                  <LaptopIcon className="mr-2 h-4 w-4" /> Laptop Actions
+                  <LaptopIcon className="mr-2 h-4 w-4" /> Действия с ноутбуком
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
                   <Button variant="outline" onClick={() => onEditLaptop(laptop)} disabled={!isAdminAuthenticated}>
-                    <Edit className="mr-2 h-4 w-4" /> Edit Details
+                    <Edit className="mr-2 h-4 w-4" /> Редакт. данные
                   </Button>
                   <Button variant="outline" onClick={() => onViewCredentials(laptop)}>
-                    <KeyRound className="mr-2 h-4 w-4" /> View Credentials
+                    <KeyRound className="mr-2 h-4 w-4" /> Просмотр учетных данных
                   </Button>
                 </div>
               </div>
@@ -103,24 +103,24 @@ export function DeskActionModal({
 
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
-                  <User className="mr-2 h-4 w-4" /> Student Assignment
+                  <User className="mr-2 h-4 w-4" /> Назначение учащегося
                 </h3>
                 {student ? (
                   <div className="space-y-2">
-                     <p className="text-sm">Assigned to: <span className="font-semibold">{student.name}</span></p>
-                     {studentGroup && <p className="text-xs text-muted-foreground flex items-center"><Package className="w-3 h-3 mr-1"/> Group: {studentGroup.name}</p>}
+                     <p className="text-sm">Назначен: <span className="font-semibold">{student.name}</span></p>
+                     {studentGroup && <p className="text-xs text-muted-foreground flex items-center"><Package className="w-3 h-3 mr-1"/> Группа: {studentGroup.name}</p>}
                     <div className="grid grid-cols-2 gap-2">
                         <Button variant="outline" onClick={() => onAssignStudent(laptop)} disabled={!isAdminAuthenticated}>
-                            <User className="mr-2 h-4 w-4" /> Change Student
+                            <User className="mr-2 h-4 w-4" /> Сменить учащегося
                         </Button>
                         <Button variant="outline" onClick={() => { onUnassignStudent(laptop.id); }} disabled={!isAdminAuthenticated}>
-                            <UserMinus className="mr-2 h-4 w-4" /> Unassign Student
+                            <UserMinus className="mr-2 h-4 w-4" /> Снять назначение
                         </Button>
                     </div>
                   </div>
                 ) : (
                   <Button variant="outline" className="w-full" onClick={() => onAssignStudent(laptop)} disabled={!isAdminAuthenticated}>
-                    <User className="mr-2 h-4 w-4" /> Assign Student
+                    <User className="mr-2 h-4 w-4" /> Назначить учащегося
                   </Button>
                 )}
               </div>
@@ -129,25 +129,25 @@ export function DeskActionModal({
 
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
-                  <StickyNote className="mr-2 h-4 w-4" /> Laptop Notes
+                  <StickyNote className="mr-2 h-4 w-4" /> Заметки о ноутбуке
                 </h3>
                 <Textarea
-                  placeholder="Enter notes for this laptop..."
+                  placeholder="Введите заметки для этого ноутбука..."
                   value={currentNotes}
                   onChange={(e) => setCurrentNotes(e.target.value)}
                   className="min-h-[80px]"
                   disabled={!isAdminAuthenticated}
                 />
                 <Button onClick={handleSaveNotes} size="sm" className="mt-2" disabled={!isAdminAuthenticated}>
-                  Save Notes
+                  Сохранить заметки
                 </Button>
               </div>
             </>
           ) : (
             <div className="text-center">
-              <p className="text-muted-foreground mb-4">This desk is empty.</p>
+              <p className="text-muted-foreground mb-4">Этот стол пуст.</p>
               <Button onClick={() => onAddLaptopToDesk(desk)} disabled={!isAdminAuthenticated}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Laptop to this Desk
+                <PlusCircle className="mr-2 h-4 w-4" /> Добавить ноутбук на этот стол
               </Button>
             </div>
           )}
@@ -156,7 +156,7 @@ export function DeskActionModal({
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline">
-              Close
+              Закрыть
             </Button>
           </DialogClose>
         </DialogFooter>

@@ -106,13 +106,13 @@ export function ClassroomLayout({
 
   return (
     <div className="bg-card p-4 md:p-6 rounded-lg shadow-md">
-      <h2 className="text-2xl font-semibold mb-6 text-center text-primary">Classroom Map</h2>
+      <h2 className="text-2xl font-semibold mb-6 text-center text-primary">Карта класса</h2>
       <div
         className="grid gap-3 md:gap-4"
         style={{
           gridTemplateColumns: `repeat(${maxVisualCols}, minmax(0, 1fr))`,
         }}
-        aria-label="Classroom Layout Grid"
+        aria-label="Сетка расположения в классе"
       >
         {gridCells}
       </div>

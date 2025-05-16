@@ -26,17 +26,16 @@ import { Input } from "@/components/ui/input";
 import { useEffect } from "react";
 
 const getLaptopFormSchema = (isEditing: boolean) => z.object({
-  login: z.string().min(1, { message: "Login is required." }),
+  login: z.string().min(1, { message: "Логин обязателен." }),
   password: isEditing 
-    ? z.string().optional() // Password optional for editing, empty string means clear, undefined/not present means no change by handler
-    : z.string().min(1, { message: "Password is required." }), // Password required for new laptops
+    ? z.string().optional() 
+    : z.string().min(1, { message: "Пароль обязателен." }), 
 });
 
 
-// This type should encompass all possible fields, then schema refines it
 type LaptopFormValues = {
   login: string;
-  password?: string; // Make password optional here to align with schema possibilities
+  password?: string; 
 };
 
 interface LaptopFormDialogProps {
@@ -53,7 +52,6 @@ export function LaptopFormDialog({ open, onOpenChange, onSubmit, initialData }: 
   });
 
   useEffect(() => {
-    // Reset form when initialData changes or dialog opens/closes
     if (open) {
       if (initialData) {
         form.reset({ login: initialData.login, password: initialData.password || "" });
@@ -65,12 +63,6 @@ export function LaptopFormDialog({ open, onOpenChange, onSubmit, initialData }: 
 
 
   const handleSubmit = (data: LaptopFormValues) => {
-    // For editing, if password field is empty, it means "don't change" or "set to empty"
-    // The parent onSubmit handler will decide based on `data.password` being an empty string vs. a new value.
-    // If isEditing and data.password is empty, it implies user wants to clear or did not touch.
-    // The schema allows optional password for edit. If it's not in `data` (e.g. if a field was truly optional and not rendered),
-    // it would be `undefined`. However, our form always has the field.
-    // So `data.password` will be string (empty or valued).
     onSubmit(data, initialData?.id);
     onOpenChange(false);
   };
@@ -79,9 +71,9 @@ export function LaptopFormDialog({ open, onOpenChange, onSubmit, initialData }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] bg-card">
         <DialogHeader>
-          <DialogTitle>{initialData ? "Edit Laptop" : "Add New Laptop"}</DialogTitle>
+          <DialogTitle>{initialData ? "Редактировать ноутбук" : "Добавить новый ноутбук"}</DialogTitle>
           <DialogDescription>
-            {initialData ? "Update the details for this laptop. Leave password blank to keep current." : "Enter the login and password for the new laptop."}
+            {initialData ? "Обновите данные этого ноутбука. Оставьте пароль пустым, чтобы сохранить текущий." : "Введите логин и пароль для нового ноутбука."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -91,9 +83,9 @@ export function LaptopFormDialog({ open, onOpenChange, onSubmit, initialData }: 
               name="login"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Login/ID</FormLabel>
+                  <FormLabel>Логин/ID</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Laptop01, AssetTag123" {...field} />
+                    <Input placeholder="например, Ноутбук01, ИнвНомер123" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -104,13 +96,13 @@ export function LaptopFormDialog({ open, onOpenChange, onSubmit, initialData }: 
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Пароль</FormLabel>
                   <FormControl>
                     <Input 
                       type="password" 
-                      placeholder={initialData ? "Leave blank to keep current" : "Enter password"} 
+                      placeholder={initialData ? "Оставьте пустым, чтобы сохранить текущий" : "Введите пароль"} 
                       {...field} 
-                      value={field.value ?? ""} // Ensure value is not undefined for input
+                      value={field.value ?? ""} 
                     />
                   </FormControl>
                   <FormMessage />
@@ -118,8 +110,8 @@ export function LaptopFormDialog({ open, onOpenChange, onSubmit, initialData }: 
               )}
             />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit">{initialData ? "Save Changes" : "Add Laptop"}</Button>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Отмена</Button>
+              <Button type="submit">{initialData ? "Сохранить изменения" : "Добавить ноутбук"}</Button>
             </DialogFooter>
           </form>
         </Form>
