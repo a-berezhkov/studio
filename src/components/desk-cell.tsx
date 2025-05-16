@@ -4,21 +4,21 @@
 import type { DragEvent } from "react";
 import type { Laptop, Student, Desk, Group } from "@/lib/types"; 
 import { cn } from "@/lib/utils";
-import { Laptop as LaptopIcon, User as UserIcon, Computer, Package } from "lucide-react"; 
+import { Laptop as LaptopIcon, User as UserIcon, Users as UsersIcon, Computer, Package } from "lucide-react"; 
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DeskCellProps {
   desk: Desk;
   laptop?: Laptop;
-  student?: Student;
-  group?: Group; 
+  students?: Student[]; // Changed from student to students array
+  groups?: Group[]; 
   onDrop: (laptopId: string) => void;
   onClick: () => void;
   canDrop?: boolean;
 }
 
-export function DeskCell({ desk, laptop, student, group, onDrop, onClick, canDrop = false }: DeskCellProps) {
+export function DeskCell({ desk, laptop, students = [], groups = [], onDrop, onClick, canDrop = false }: DeskCellProps) {
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     if (canDrop) {
       event.preventDefault();
@@ -39,10 +39,19 @@ export function DeskCell({ desk, laptop, student, group, onDrop, onClick, canDro
   };
 
   const hasLaptop = !!laptop;
+  const hasStudents = students && students.length > 0;
+
   const tooltipContent = [];
   if (laptop) tooltipContent.push(`Ноутбук: ${laptop.login}`);
-  if (student) tooltipContent.push(`Учащийся: ${student.name}`);
-  if (group) tooltipContent.push(`Группа: ${group.name}`);
+  if (hasStudents) {
+    tooltipContent.push(`Учащиеся: ${students.map(s => s.name).join(', ')}`);
+    if (students.length === 1 && students[0].groupId) {
+        const group = groups.find(g => g.id === students[0].groupId);
+        if (group) tooltipContent.push(`Группа: ${group.name}`);
+    } else if (students.length > 1) {
+        // Could list groups if diverse, or primary group
+    }
+  }
 
 
   return (
@@ -78,10 +87,13 @@ export function DeskCell({ desk, laptop, student, group, onDrop, onClick, canDro
             ) : (
                <Computer className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground opacity-50" />
             )}
-            {laptop && student && (
+            {laptop && hasStudents && (
               <Tooltip>
                 <TooltipTrigger>
-                   <UserIcon className="w-4 h-4 md:w-5 md:h-5 text-accent-foreground" />
+                   {students.length > 1 ? 
+                    <UsersIcon className="w-4 h-4 md:w-5 md:h-5 text-accent-foreground" /> : 
+                    <UserIcon className="w-4 h-4 md:w-5 md:h-5 text-accent-foreground" />
+                   }
                 </TooltipTrigger>
                  {tooltipContent.length > 0 && (
                   <TooltipContent>
@@ -90,7 +102,7 @@ export function DeskCell({ desk, laptop, student, group, onDrop, onClick, canDro
                 )}
               </Tooltip>
             )}
-             {laptop && student && group && (
+             {laptop && hasStudents && students.length === 1 && students[0].groupId && groups.find(g => g.id === students[0].groupId) && (
                <Tooltip>
                 <TooltipTrigger>
                     <Package className="w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground" />
@@ -102,10 +114,10 @@ export function DeskCell({ desk, laptop, student, group, onDrop, onClick, canDro
                 )}
               </Tooltip>
             )}
-          </div>
-           {laptop && (!student || !group) && ( // Keep consistent spacing if student/group is missing
+             {!hasStudents && laptop && ( // Keep consistent spacing if student/group is missing
              <div className="w-4 h-4 md:w-5 md:h-5" /> 
           )}
+          </div>
         </CardContent>
       </Card>
     </TooltipProvider>

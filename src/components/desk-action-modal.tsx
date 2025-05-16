@@ -16,8 +16,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEffect, useState } from "react";
-import { Laptop as LaptopIcon, User, Edit, KeyRound, StickyNote, PlusCircle, UserMinus, Package, Unlink } from "lucide-react"; 
+import { Laptop as LaptopIcon, User, Users, Edit, KeyRound, StickyNote, PlusCircle, UserMinus, Package, Unlink, Trash2, Settings2 } from "lucide-react"; 
 
 interface DeskActionModalProps {
   open: boolean;
@@ -25,11 +26,12 @@ interface DeskActionModalProps {
   deskActionData: DeskActionData | null;
   onEditLaptop: (laptop: Laptop) => void;
   onViewCredentials: (laptop: Laptop) => void;
-  onAssignStudent: (laptop: Laptop) => void;
-  onUnassignStudent: (laptopId: string) => void;
+  onManageAssignments: (laptop: Laptop) => void; // Changed
+  onUnassignAllStudents: (laptopId: string) => void; // Changed
+  onUnassignSpecificStudent: (laptopId: string, studentId: string) => void; // New
   onSaveNotes: (laptopId: string, notes: string) => void;
   onAddLaptopToDesk: (desk: Desk) => void;
-  onUnassignLaptopFromDesk?: (laptopId: string) => void; // New prop
+  onUnassignLaptopFromDesk?: (laptopId: string) => void; 
   groups: Group[]; 
   isAdminAuthenticated: boolean;
 }
@@ -40,11 +42,12 @@ export function DeskActionModal({
   deskActionData,
   onEditLaptop,
   onViewCredentials,
-  onAssignStudent,
-  onUnassignStudent,
+  onManageAssignments, // Changed
+  onUnassignAllStudents, // Changed
+  onUnassignSpecificStudent, // New
   onSaveNotes,
   onAddLaptopToDesk,
-  onUnassignLaptopFromDesk, // New prop
+  onUnassignLaptopFromDesk, 
   groups, 
   isAdminAuthenticated,
 }: DeskActionModalProps) {
@@ -60,8 +63,7 @@ export function DeskActionModal({
 
   if (!deskActionData) return null;
 
-  const { desk, laptop, student } = deskActionData;
-  const studentGroup = student ? groups.find(g => g.id === student.groupId) : undefined;
+  const { desk, laptop, students } = deskActionData; // students is now an array
 
   const handleSaveNotes = () => {
     if (laptop && isAdminAuthenticated) {
@@ -72,19 +74,24 @@ export function DeskActionModal({
   const handleUnassignFromDesk = () => {
     if (laptop && onUnassignLaptopFromDesk && isAdminAuthenticated) {
       onUnassignLaptopFromDesk(laptop.id);
-      onOpenChange(false); // Close modal after action
+      onOpenChange(false); 
     }
+  }
+
+  const getStudentGroupName = (student: Student): string => {
+    const group = groups.find(g => g.id === student.groupId);
+    return group ? group.name : "Неизвестная группа";
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-card">
+      <DialogContent className="sm:max-w-lg bg-card"> {/* Slightly wider for student list */}
         <DialogHeader>
           <DialogTitle>Действия для стола {desk.id}</DialogTitle>
           {laptop ? (
             <DialogDescription>
-              Управление ноутбуком <span className="font-semibold">{laptop.login}</span>
-              {student ? ` назначенным учащемуся ${student.name}${studentGroup ? ` (Группа: ${studentGroup.name})` : ''}.` : "."}
+              Управление ноутбуком <span className="font-semibold">{laptop.login}</span>.
+              {students && students.length > 0 ? ` Назначен учащимся.` : " Учащиеся не назначены."}
             </DialogDescription>
           ) : (
             <DialogDescription>Этот стол в данный момент пуст.</DialogDescription>
@@ -122,27 +129,45 @@ export function DeskActionModal({
               <Separator />
 
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
-                  <User className="mr-2 h-4 w-4" /> Назначение учащегося
+                <h3 className="text-sm font-medium text-muted-foreground mb-1 flex items-center">
+                  <Users className="mr-2 h-4 w-4" /> Назначенные учащиеся
                 </h3>
-                {student ? (
-                  <div className="space-y-2">
-                     <p className="text-sm">Назначен: <span className="font-semibold">{student.name}</span></p>
-                     {studentGroup && <p className="text-xs text-muted-foreground flex items-center"><Package className="w-3 h-3 mr-1"/> Группа: {studentGroup.name}</p>}
-                    <div className="grid grid-cols-2 gap-2">
-                        <Button variant="outline" onClick={() => onAssignStudent(laptop)} disabled={!isAdminAuthenticated}>
-                            <User className="mr-2 h-4 w-4" /> Сменить учащегося
-                        </Button>
-                        <Button variant="outline" onClick={() => { onUnassignStudent(laptop.id); }} disabled={!isAdminAuthenticated}>
-                            <UserMinus className="mr-2 h-4 w-4" /> Снять назначение
-                        </Button>
-                    </div>
-                  </div>
+                {students && students.length > 0 ? (
+                  <ScrollArea className="max-h-[150px] border rounded-md p-2 mb-2">
+                    <ul className="space-y-1">
+                      {students.map(student => (
+                        <li key={student.id} className="text-sm flex justify-between items-center">
+                          <div>
+                            <span className="font-medium">{student.name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">({getStudentGroupName(student)})</span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6"
+                            onClick={() => onUnassignSpecificStudent(laptop.id, student.id)} 
+                            disabled={!isAdminAuthenticated}
+                            title="Снять назначение с этого учащегося"
+                          >
+                            <UserMinus className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </ScrollArea>
                 ) : (
-                  <Button variant="outline" className="w-full" onClick={() => onAssignStudent(laptop)} disabled={!isAdminAuthenticated}>
-                    <User className="mr-2 h-4 w-4" /> Назначить учащегося
-                  </Button>
+                  <p className="text-sm text-muted-foreground mb-2">Учащиеся не назначены.</p>
                 )}
+                <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" className="w-full" onClick={() => onManageAssignments(laptop)} disabled={!isAdminAuthenticated}>
+                        <Settings2 className="mr-2 h-4 w-4" /> Управлять назначениями
+                    </Button>
+                    {students && students.length > 0 && (
+                        <Button variant="outline" onClick={() => { onUnassignAllStudents(laptop.id); }} disabled={!isAdminAuthenticated}>
+                            <Trash2 className="mr-2 h-4 w-4" /> Снять все назначения
+                        </Button>
+                    )}
+                </div>
               </div>
 
               <Separator />
@@ -184,4 +209,3 @@ export function DeskActionModal({
     </Dialog>
   );
 }
-

@@ -14,14 +14,13 @@ import { PlusCircle, Users, ArrowLeft, Trash2, Edit, Package, Users2 } from "luc
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Separator } from "@/components/ui/separator";
 
 export default function AdminStudentsGroupsPage() {
   const { toast } = useToast();
   
   const [groups, setGroups] = useState<Group[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
-  const [allLaptops, setAllLaptops] = useState<Laptop[]>([]); // Needed to check assignments
+  const [allLaptops, setAllLaptops] = useState<Laptop[]>([]); 
 
   const [isStudentFormOpen, setIsStudentFormOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | undefined>(undefined);
@@ -30,10 +29,35 @@ export default function AdminStudentsGroupsPage() {
 
   const [itemToDelete, setItemToDelete] = useState<{ type: 'student' | 'group', id: string, name?: string } | null>(null);
 
+  // Data migration for localStorage (laptops)
+  const migrateLaptopData = () => {
+    const storedLaptopsRaw = localStorage.getItem('laptops');
+    if (storedLaptopsRaw) {
+      let parsedLaptops = JSON.parse(storedLaptopsRaw);
+      let migrationNeeded = false;
+      parsedLaptops = parsedLaptops.map((lap: any) => {
+        if (lap.studentId !== undefined && !lap.studentIds) {
+          migrationNeeded = true;
+          return { ...lap, studentIds: lap.studentId ? [lap.studentId] : [], studentId: undefined };
+        }
+         if (lap.studentIds === undefined) {
+            migrationNeeded = true;
+            return { ...lap, studentIds: [] };
+        }
+        return lap;
+      });
+      if (migrationNeeded) {
+        localStorage.setItem('laptops', JSON.stringify(parsedLaptops));
+      }
+      return parsedLaptops;
+    }
+    return [];
+  };
+
   useEffect(() => {
     const storedGroups = localStorage.getItem('groups');
     const storedStudents = localStorage.getItem('students');
-    const storedLaptops = localStorage.getItem('laptops');
+    const migratedLaptops = migrateLaptopData();
 
     if (storedGroups) setGroups(JSON.parse(storedGroups));
     else {
@@ -41,7 +65,7 @@ export default function AdminStudentsGroupsPage() {
         setGroups([defaultGroup]);
     }
     if (storedStudents) setAllStudents(JSON.parse(storedStudents));
-    if (storedLaptops) setAllLaptops(JSON.parse(storedLaptops));
+    setAllLaptops(migratedLaptops);
   }, []);
 
   const saveGroupsToLocalStorage = useCallback(() => {
@@ -52,7 +76,7 @@ export default function AdminStudentsGroupsPage() {
     localStorage.setItem('students', JSON.stringify(allStudents));
   }, [allStudents]);
   
-  const saveLaptopsToLocalStorage = useCallback(() => { // Laptops might be updated if student is deleted
+  const saveLaptopsToLocalStorage = useCallback(() => { 
     localStorage.setItem('laptops', JSON.stringify(allLaptops));
   }, [allLaptops]);
 
@@ -129,15 +153,19 @@ export default function AdminStudentsGroupsPage() {
   const confirmDeleteStudent = () => {
     if (!itemToDelete || itemToDelete.type !== 'student') return;
     
-    const studentName = itemToDelete.name || itemToDelete.id;
+    const studentIdToDelete = itemToDelete.id;
+    const studentName = itemToDelete.name || studentIdToDelete;
 
     // Unassign student from any laptops globally
-    const updatedLaptops = allLaptops.map(lap => 
-      lap.studentId === itemToDelete!.id ? { ...lap, studentId: null } : lap
-    );
+    const updatedLaptops = allLaptops.map(lap => {
+      if (lap.studentIds.includes(studentIdToDelete)) {
+        return { ...lap, studentIds: lap.studentIds.filter(id => id !== studentIdToDelete) };
+      }
+      return lap;
+    });
     setAllLaptops(updatedLaptops);
 
-    const updatedStudents = allStudents.filter(stu => stu.id !== itemToDelete!.id);
+    const updatedStudents = allStudents.filter(stu => stu.id !== studentIdToDelete);
     setAllStudents(updatedStudents);
     
     toast({ title: "Учащийся удален", description: `Учащийся "${studentName}" был удален.` });
@@ -151,6 +179,10 @@ export default function AdminStudentsGroupsPage() {
     } else if (itemToDelete.type === 'group') {
       confirmDeleteGroup();
     }
+  };
+
+  const getAssignedLaptopsForStudent = (studentId: string): Laptop[] => {
+    return allLaptops.filter(laptop => laptop.studentIds.includes(studentId));
   };
 
   return (
@@ -256,7 +288,7 @@ export default function AdminStudentsGroupsPage() {
                                 <StudentItem
                                   key={student.id}
                                   student={student}
-                                  assignedLaptop={allLaptops.find(l => l.studentId === student.id)}
+                                  assignedLaptops={getAssignedLaptopsForStudent(student.id)}
                                   groupName={group.name} 
                                   onEdit={() => { setEditingStudent(student); setIsStudentFormOpen(true); }}
                                   onDelete={() => handleDeleteStudent(student.id)}
@@ -305,7 +337,7 @@ export default function AdminStudentsGroupsPage() {
               <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
               <AlertDialogDescription>
                 Это действие необратимо. Это навсегда удалит {itemToDelete.type === 'student' ? 'учащегося' : 'группу'} <span className="font-semibold">"{itemToDelete.name || 'этот элемент'}"</span>.
-                {itemToDelete.type === 'student' && ' Он также будет снят с назначения на любой ноутбук.'}
+                {itemToDelete.type === 'student' && ' Он также будет снят со всех назначений на ноутбуки.'}
                 {itemToDelete.type === 'group' && ' Убедитесь, что в этой группе нет учащихся перед удалением.'}
               </AlertDialogDescription>
             </AlertDialogHeader>

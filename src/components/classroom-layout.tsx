@@ -1,14 +1,14 @@
 
 "use client";
 
-import type { Laptop, Student, Desk, Group } from "@/lib/types"; // Added Group
+import type { Laptop, Student, Desk, Group } from "@/lib/types";
 import { DeskCell } from "@/components/desk-cell";
 
 interface ClassroomLayoutProps {
   desks: Desk[]; 
   laptops: Laptop[];
-  students: Student[];
-  groups: Group[]; // Added groups
+  allStudents: Student[]; // Changed from students to allStudents for clarity
+  groups: Group[]; 
   onDropLaptopOnDesk: (deskId: number, laptopId: string) => void;
   onDeskClick: (deskId: number, laptop: Laptop | undefined) => void;
   rows: number; 
@@ -28,8 +28,8 @@ const CorridorCell = () => (
 export function ClassroomLayout({
   desks,
   laptops,
-  students,
-  groups, // Added groups
+  allStudents, // Changed
+  groups, 
   onDropLaptopOnDesk,
   onDeskClick,
   rows,
@@ -43,16 +43,11 @@ export function ClassroomLayout({
     return laptops.find((laptop) => laptop.locationId === deskId);
   };
 
-  const getStudentForLaptop = (laptop: Laptop | undefined): Student | undefined => {
-    if (!laptop || !laptop.studentId) return undefined;
-    return students.find((student) => student.id === laptop.studentId);
+  const getStudentsForLaptop = (laptop: Laptop | undefined): Student[] => {
+    if (!laptop || !laptop.studentIds || laptop.studentIds.length === 0) return [];
+    return allStudents.filter((student) => laptop.studentIds.includes(student.id));
   };
-
-  const getGroupForStudent = (student: Student | undefined): Group | undefined => {
-    if (!student || !student.groupId) return undefined;
-    return groups.find((group) => group.id === student.groupId);
-  }
-
+  
   const gridCells: JSX.Element[] = [];
   let deskIndex = 0;
   let maxVisualCols = cols; 
@@ -73,16 +68,15 @@ export function ClassroomLayout({
       if (!currentDesk) continue;
 
       const laptopOnDesk = getLaptopAtDesk(currentDesk.id);
-      const studentAssigned = getStudentForLaptop(laptopOnDesk);
-      const groupOfStudent = getGroupForStudent(studentAssigned);
+      const studentsAssigned = getStudentsForLaptop(laptopOnDesk);
       
       currentRowVisualCells.push(
         <DeskCell
           key={`desk-${currentDesk.id}`}
           desk={currentDesk}
           laptop={laptopOnDesk}
-          student={studentAssigned}
-          group={groupOfStudent} // Pass group
+          students={studentsAssigned} // Pass array of students
+          groups={groups}
           onDrop={(laptopId) => {
             if (isAdminAuthenticated) onDropLaptopOnDesk(currentDesk.id, laptopId);
           }}

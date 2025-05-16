@@ -17,7 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Edit3, Trash2, Eye, UserPlus, Users, Laptop as LaptopIconLucide, Home, Edit, LogIn, LogOut, ShieldAlert, Package } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, Eye, UserPlus, Users, Laptop as LaptopIconLucide, Home, Edit, LogIn, LogOut, ShieldAlert, Package, Users2Icon } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
@@ -25,7 +25,7 @@ import Link from "next/link";
 export type DeskActionData = {
   desk: Desk;
   laptop?: Laptop;
-  student?: Student;
+  students?: Student[]; // Changed to array
 };
 
 const DEFAULT_ROOM_ID = "room-default";
@@ -67,6 +67,32 @@ export default function HomePage() {
 
   const currentRoom = rooms.find(r => r.id === currentRoomId);
 
+  // Data migration for localStorage
+  const migrateLocalStorageData = () => {
+    const storedLaptopsRaw = localStorage.getItem('laptops');
+    if (storedLaptopsRaw) {
+      let parsedLaptops = JSON.parse(storedLaptopsRaw);
+      let migrationNeeded = false;
+      parsedLaptops = parsedLaptops.map((lap: any) => {
+        if (lap.studentId !== undefined && !lap.studentIds) {
+          migrationNeeded = true;
+          return { ...lap, studentIds: lap.studentId ? [lap.studentId] : [], studentId: undefined };
+        }
+        if (lap.studentIds === undefined) { // Ensure studentIds always exists
+            migrationNeeded = true;
+            return { ...lap, studentIds: [] };
+        }
+        return lap;
+      });
+      if (migrationNeeded) {
+        localStorage.setItem('laptops', JSON.stringify(parsedLaptops));
+      }
+      return parsedLaptops;
+    }
+    return [];
+  };
+
+
   useEffect(() => {
     const storedAuth = localStorage.getItem('isAdminAuthenticated');
     if (storedAuth === 'true') {
@@ -75,12 +101,11 @@ export default function HomePage() {
     }
 
     const storedRooms = localStorage.getItem('rooms');
-    const storedLaptops = localStorage.getItem('laptops');
+    const migratedLaptops = migrateLocalStorageData();
     const storedStudents = localStorage.getItem('students');
     const storedGroups = localStorage.getItem('groups');
     const storedCurrentRoomId = localStorage.getItem('currentRoomId');
     let defaultRoomCreated = false;
-    let defaultGroupCreated = false;
 
     if (storedRooms) {
       setRooms(JSON.parse(storedRooms));
@@ -103,25 +128,26 @@ export default function HomePage() {
     } else {
         const defaultGroup: Group = { id: DEFAULT_GROUP_ID, name: "Нераспределенные" };
         setGroups([defaultGroup]);
-        defaultGroupCreated = true;
     }
-
-    if (storedLaptops) {
-      setLaptops(JSON.parse(storedLaptops));
+    
+    if (migratedLaptops.length > 0) {
+        setLaptops(migratedLaptops);
     } else {
-        const mockLaptops: Laptop[] = [
-            { id: "laptop-1", login: "Kab5-N01", password: "password1", locationId: 1, studentId: "student-1", notes: "Это заметка для ноутбука 1.", roomId: DEFAULT_ROOM_ID },
-            { id: "laptop-2", login: "Kab5-N02", password: "password2", locationId: 2, studentId: null, notes: "", roomId: DEFAULT_ROOM_ID },
-            { id: "laptop-3", login: "Kab5-N03", password: "password3", locationId: null, studentId: null, notes: "Заметка для неназначенного ноутбука.", roomId: DEFAULT_ROOM_ID },
+         const mockLaptops: Laptop[] = [
+            { id: "laptop-1", login: "Kab5-N01", password: "password1", locationId: 1, studentIds: ["student-1"], notes: "Это заметка для ноутбука 1.", roomId: DEFAULT_ROOM_ID },
+            { id: "laptop-2", login: "Kab5-N02", password: "password2", locationId: 2, studentIds: [], notes: "", roomId: DEFAULT_ROOM_ID },
+            { id: "laptop-3", login: "Kab5-N03", password: "password3", locationId: null, studentIds: [], notes: "Заметка для неназначенного ноутбука.", roomId: DEFAULT_ROOM_ID },
         ];
         setLaptops(mockLaptops);
     }
+
     if (storedStudents) {
         setStudents(JSON.parse(storedStudents));
     } else {
         const mockStudents: Student[] = [
             { id: "student-1", name: "Алиса Селезнева", groupId: DEFAULT_GROUP_ID },
             { id: "student-2", name: "Иван Царевич", groupId: DEFAULT_GROUP_ID },
+            { id: "student-3", name: "Колобок Хлебобулочный", groupId: DEFAULT_GROUP_ID },
         ];
         setStudents(mockStudents);
     }
@@ -161,10 +187,10 @@ export default function HomePage() {
     } else {
       setDesks([]);
     }
-  }, [currentRoomId, rooms, currentRoom?.rows, currentRoom?.cols]); // currentRoom dependency to react to its changes
+  }, [currentRoomId, rooms, currentRoom?.rows, currentRoom?.cols]);
 
   useEffect(() => {
-    if (isAdminAuthenticated) { // Save only if admin is authenticated
+    if (isAdminAuthenticated) { 
       localStorage.setItem('rooms', JSON.stringify(rooms));
       localStorage.setItem('laptops', JSON.stringify(laptops));
       localStorage.setItem('students', JSON.stringify(students)); 
@@ -247,7 +273,7 @@ export default function HomePage() {
           if (typeof formData.password === 'string' && formData.password.length > 0) { 
             updatedLaptop.password = formData.password;
           } else if (formData.password === "" && typeof lap.password === 'string') { 
-            updatedLaptop.password = ""; // Explicitly clear password if empty string is provided
+            updatedLaptop.password = ""; 
           }
           return updatedLaptop;
         }
@@ -259,7 +285,7 @@ export default function HomePage() {
         login: formData.login,
         password: formData.password || "", 
         locationId: laptopToCreateAtDesk ? laptopToCreateAtDesk.id : null,
-        studentId: null,
+        studentIds: [], // Initialize with empty array
         notes: "", 
         roomId: currentRoomId,
       };
@@ -314,7 +340,6 @@ export default function HomePage() {
         if (lap.id === laptopIdToDrop) {
           return { ...lap, locationId: deskId, roomId: currentRoomId };
         }
-        // If there was a laptop at the target desk, move it to the source desk of the dropped laptop (swap)
         if (existingLaptopAtDesk && lap.id === existingLaptopAtDesk.id) {
           return { ...lap, locationId: droppedLaptop.locationId, roomId: currentRoomId }; 
         }
@@ -324,50 +349,55 @@ export default function HomePage() {
     setDraggedLaptopId(null);
   };
 
-  const handleAssignStudentToLaptop = (laptopId: string, studentId: string) => {
+  const handleAssignStudentsToLaptop = (laptopId: string, selectedStudentIds: string[]) => {
     if (!isAdminAuthenticated) return; 
-    
-    let newLaptops = [...laptops];
-
-    // Unassign the student from any OTHER laptop they might be assigned to globally
-    newLaptops = newLaptops.map(otherLap => {
-      if (otherLap.studentId === studentId && otherLap.id !== laptopId) {
-        return { ...otherLap, studentId: null };
-      }
-      return otherLap;
-    });
-
-    // Assign the student to the target laptop
-    newLaptops = newLaptops.map(lap => {
+    setLaptops(laps => laps.map(lap => {
       if (lap.id === laptopId) { 
-        return { ...lap, studentId };
+        return { ...lap, studentIds: selectedStudentIds };
       }
       return lap;
-    });
-
-    setLaptops(newLaptops);
+    }));
     setIsAssignStudentOpen(false);
     setLaptopToAssign(null);
     setIsDeskActionModalOpen(false);
-    toast({ title: "Учащийся назначен", description: "Учащийся был назначен на ноутбук." });
+    toast({ title: "Назначения обновлены", description: "Список учащихся для ноутбука обновлен." });
   };
-
-  const handleUnassignStudentFromLaptop = (laptopId: string) => {
+  
+  const handleUnassignAllStudentsFromLaptop = (laptopId: string) => {
     if (!isAdminAuthenticated) return;
     setLaptops(laps => laps.map(lap => {
       if (lap.id === laptopId) { 
-        return { ...lap, studentId: null };
+        return { ...lap, studentIds: [] };
       }
       return lap;
     }));
     setIsDeskActionModalOpen(false);
-    toast({ title: "Назначение учащегося снято", description: "Назначение учащегося было снято." });
+    toast({ title: "Все назначения сняты", description: "Все учащиеся были сняты с этого ноутбука." });
   };
   
+  const handleUnassignSpecificStudentFromLaptop = (laptopId: string, studentIdToRemove: string) => {
+    if (!isAdminAuthenticated) return;
+    setLaptops(laps => laps.map(lap => {
+      if (lap.id === laptopId) {
+        return { ...lap, studentIds: lap.studentIds.filter(id => id !== studentIdToRemove) };
+      }
+      return lap;
+    }));
+    // Optionally close modal or refresh its state if open
+    if(currentActionDesk?.laptop?.id === laptopId) {
+        setCurrentActionDesk(prev => prev ? {
+            ...prev,
+            students: prev.students?.filter(s => s.id !== studentIdToRemove)
+        } : null);
+    }
+    toast({ title: "Учащийся снят с ноутбука", description: "Выбранный учащийся был снят с назначения." });
+  };
+
+
   const handleUnassignLocation = (laptopId: string) => {
     if (!isAdminAuthenticated || !currentRoomId) return;
     setLaptops(laps => laps.map(lap => {
-      if (lap.id === laptopId && lap.roomId === currentRoomId) { // Check if laptop is in current room
+      if (lap.id === laptopId && lap.roomId === currentRoomId) { 
         return { ...lap, locationId: null };
       }
       return lap;
@@ -381,11 +411,11 @@ export default function HomePage() {
     if (!desk) return;
 
     const laptopOnDesk = laptops.find(l => l.roomId === currentRoom.id && l.locationId === deskId);
-    const studentAssigned = laptopOnDesk && laptopOnDesk.studentId
-      ? students.find(s => s.id === laptopOnDesk.studentId) 
-      : undefined;
+    const studentsAssigned = laptopOnDesk && laptopOnDesk.studentIds.length > 0
+      ? students.filter(s => laptopOnDesk.studentIds.includes(s.id)) 
+      : [];
 
-    setCurrentActionDesk({ desk, laptop: laptopOnDesk, student: studentAssigned });
+    setCurrentActionDesk({ desk, laptop: laptopOnDesk, students: studentsAssigned });
     setIsDeskActionModalOpen(true);
   };
 
@@ -398,7 +428,6 @@ export default function HomePage() {
       return lap;
     }));
     toast({ title: "Заметки сохранены", description: "Заметки для ноутбука обновлены." });
-    // Update notes in the action modal if it's open for this laptop
     if (currentActionDesk?.laptop?.id === laptopId) {
         setCurrentActionDesk(prev => prev ? {...prev, laptop: {...prev.laptop!, notes}} : null);
     }
@@ -467,8 +496,8 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
              <Button asChild variant="outline">
               <Link href="/admin/students">
-                <Package className="mr-2 h-4 w-4" />
-                Управление группами и учащимися
+                <Users2Icon className="mr-2 h-4 w-4" /> 
+                Упр. группами и учащимися
               </Link>
             </Button>
             <Button asChild variant="outline">
@@ -514,7 +543,7 @@ export default function HomePage() {
               <ClassroomLayout
                 desks={desks}
                 laptops={assignedLaptopsInCurrentRoom}
-                students={students} 
+                allStudents={students} 
                 groups={groups} 
                 onDropLaptopOnDesk={handleDropLaptopOnDesk}
                 onDeskClick={(deskId) => handleOpenDeskActionModal(deskId)}
@@ -628,32 +657,32 @@ export default function HomePage() {
                     <LaptopItem
                       key={laptop.id}
                       laptop={laptop}
-                      assignedStudent={students.find(s => s.id === laptop.studentId)} 
+                      assignedStudents={students.filter(s => laptop.studentIds.includes(s.id))} 
                       groups={groups} 
                       isDraggable={true}
                       onDragStart={handleDragStart}
                       onEdit={() => { setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
                       onDelete={() => handleDeleteLaptop(laptop.id)}
                       onViewCredentials={() => { setLaptopToView(laptop); setIsViewCredentialsOpen(true); }}
-                      onAssignStudent={() => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true); }}
+                      onManageAssignments={() => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true); }}
+                      onUnassignAllStudents={() => handleUnassignAllStudentsFromLaptop(laptop.id)}
                       isAdminAuthenticated={isAdminAuthenticated}
                     />
                   ))}
                    {assignedLaptopsInCurrentRoom.length > 0 && unassignedLaptopsInCurrentRoom.length > 0 && <Separator className="my-3"/>}
-                   {/* Display assigned laptops last or separately */}
                    {assignedLaptopsInCurrentRoom.map(laptop => (
                     <LaptopItem
                       key={laptop.id}
                       laptop={laptop}
-                      assignedStudent={students.find(s => s.id === laptop.studentId)} 
+                      assignedStudents={students.filter(s => laptop.studentIds.includes(s.id))} 
                       groups={groups} 
                       isDraggable={true}
                       onDragStart={handleDragStart}
                       onEdit={() => { setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
                       onDelete={() => handleDeleteLaptop(laptop.id)}
                       onViewCredentials={() => { setLaptopToView(laptop); setIsViewCredentialsOpen(true); }}
-                      onAssignStudent={() => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true); }}
-                      onUnassignStudent={laptop.studentId ? () => handleUnassignStudentFromLaptop(laptop.id) : undefined}
+                      onManageAssignments={() => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true); }}
+                      onUnassignAllStudents={() => handleUnassignAllStudentsFromLaptop(laptop.id)}
                       onUnassignLocation={() => handleUnassignLocation(laptop.id)}
                       isAdminAuthenticated={isAdminAuthenticated}
                     />
@@ -695,10 +724,9 @@ export default function HomePage() {
         open={isAssignStudentOpen}
         onOpenChange={setIsAssignStudentOpen}
         laptop={laptopToAssign}
-        students={students} 
+        allStudents={students} 
         groups={groups} 
-        laptops={laptops} 
-        onAssign={handleAssignStudentToLaptop}
+        onAssign={handleAssignStudentsToLaptop}
         isAdminAuthenticated={isAdminAuthenticated}
       />
       <ViewCredentialsDialog
@@ -712,9 +740,10 @@ export default function HomePage() {
         deskActionData={currentActionDesk}
         onEditLaptop={(laptop) => { setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
         onViewCredentials={(laptop) => { setLaptopToView(laptop); setIsViewCredentialsOpen(true); }}
-        onAssignStudent={(laptop) => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true); }}
-        onUnassignStudent={handleUnassignStudentFromLaptop}
-        onUnassignLaptopFromDesk={handleUnassignLocation} // Pass the handler
+        onManageAssignments={(laptop) => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true); }}
+        onUnassignAllStudents={handleUnassignAllStudentsFromLaptop}
+        onUnassignSpecificStudent={handleUnassignSpecificStudentFromLaptop}
+        onUnassignLaptopFromDesk={handleUnassignLocation}
         onSaveNotes={handleSaveNotes}
         onAddLaptopToDesk={(desk) => { 
             setLaptopToCreateAtDesk(desk); 
@@ -744,4 +773,3 @@ export default function HomePage() {
     </div>
   );
 }
-

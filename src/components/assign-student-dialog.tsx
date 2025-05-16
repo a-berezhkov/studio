@@ -21,15 +21,16 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AssignStudentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   laptop: Laptop | null;
-  students: Student[]; 
+  allStudents: Student[]; 
   groups: Group[];
-  laptops: Laptop[]; 
-  onAssign: (laptopId: string, studentId: string) => void;
+  onAssign: (laptopId: string, selectedStudentIds: string[]) => void;
   isAdminAuthenticated: boolean;
 }
 
@@ -37,52 +38,59 @@ export function AssignStudentDialog({
     open, 
     onOpenChange, 
     laptop, 
-    students, 
+    allStudents, 
     groups, 
-    laptops, 
     onAssign, 
     isAdminAuthenticated 
 }: AssignStudentDialogProps) {
   const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [selectedStudentId, setSelectedStudentId] = useState<string | undefined>(undefined);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   
-  const assignedStudentIdsGlobally = useMemo(() => new Set(
-    laptops.map(l => l.studentId).filter(Boolean)
-  ), [laptops]);
+  useEffect(() => {
+    if (open && laptop) {
+      setSelectedStudentIds(laptop.studentIds || []);
+      // If there are assigned students, try to set the group of the first one
+      if (laptop.studentIds && laptop.studentIds.length > 0) {
+        const firstAssignedStudent = allStudents.find(s => s.id === laptop.studentIds[0]);
+        if (firstAssignedStudent) {
+          setSelectedGroupId(firstAssignedStudent.groupId);
+        } else if (groups.length > 0) {
+          setSelectedGroupId(groups[0].id); // Default to first group if assigned student not found or no students assigned
+        }
+      } else if (groups.length > 0) {
+         setSelectedGroupId(groups[0].id); // Default to first group
+      } else {
+        setSelectedGroupId(undefined);
+      }
+      setSearchTerm("");
+    } else if (open) {
+        setSelectedStudentIds([]);
+        setSelectedGroupId(groups[0]?.id || undefined);
+        setSearchTerm("");
+    }
+  }, [open, laptop, allStudents, groups]);
 
   const studentsInSelectedGroup = useMemo(() => {
     if (!selectedGroupId) return [];
-    return students.filter(s => s.groupId === selectedGroupId);
-  }, [students, selectedGroupId]);
+    return allStudents.filter(s => s.groupId === selectedGroupId);
+  }, [allStudents, selectedGroupId]);
 
-  const availableStudentsToDisplay = useMemo(() => {
+  const filteredStudentsToDisplay = useMemo(() => {
     return studentsInSelectedGroup
-      .filter(s => 
-        (!assignedStudentIdsGlobally.has(s.id) || (laptop && s.id === laptop.studentId)) &&
-        (searchTerm === "" || s.name.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
+      .filter(s => searchTerm === "" || s.name.toLowerCase().includes(searchTerm.toLowerCase()))
       .sort((a,b) => a.name.localeCompare(b.name));
-  }, [studentsInSelectedGroup, assignedStudentIdsGlobally, laptop, searchTerm]);
+  }, [studentsInSelectedGroup, searchTerm]);
 
-  useEffect(() => {
-    if (open && laptop?.studentId) {
-      const currentStudent = students.find(s => s.id === laptop.studentId);
-      if (currentStudent) {
-        setSelectedGroupId(currentStudent.groupId);
-        setSelectedStudentId(currentStudent.id);
-        setSearchTerm(""); 
-      }
-    } else if (open) {
-      setSelectedGroupId(groups[0]?.id || undefined); 
-      setSelectedStudentId(undefined);
-      setSearchTerm("");
-    }
-  }, [open, laptop, students, groups]);
+  const handleStudentSelectionChange = (studentId: string, checked: boolean) => {
+    setSelectedStudentIds(prev => 
+      checked ? [...prev, studentId] : prev.filter(id => id !== studentId)
+    );
+  };
 
-  const handleAssign = () => {
-    if (laptop && selectedStudentId && isAdminAuthenticated) {
-      onAssign(laptop.id, selectedStudentId);
+  const handleSaveAssignments = () => {
+    if (laptop && isAdminAuthenticated) {
+      onAssign(laptop.id, selectedStudentIds);
       onOpenChange(false);
     }
   };
@@ -91,11 +99,11 @@ export function AssignStudentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-card">
+      <DialogContent className="sm:max-w-lg bg-card"> {/* Increased width slightly */}
         <DialogHeader>
-          <DialogTitle>Назначить учащегося на ноутбук: {laptop.login}</DialogTitle>
+          <DialogTitle>Назначить учащихся на ноутбук: {laptop.login}</DialogTitle>
           <DialogDescription>
-            Выберите группу, затем найдите и выберите учащегося. Будут доступны только учащиеся, еще не назначенные на ноутбук.
+            Выберите группу, затем отметьте учащихся для назначения на этот ноутбук.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -107,7 +115,8 @@ export function AssignStudentDialog({
               value={selectedGroupId} 
               onValueChange={(value) => {
                 setSelectedGroupId(value);
-                setSelectedStudentId(undefined); 
+                // Keep existing selections from other groups if desired, or clear:
+                // setSelectedStudentIds(ids => ids.filter(id => allStudents.find(s => s.id === id)?.groupId === value));
                 setSearchTerm("");
               }}
               disabled={!isAdminAuthenticated || groups.length === 0}
@@ -133,53 +142,45 @@ export function AssignStudentDialog({
             <>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="student-search" className="text-right">
-                  Поиск учащегося
+                  Поиск в группе
                 </Label>
                 <Input
                   id="student-search"
                   placeholder="Введите для поиска по имени..."
                   value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setSelectedStudentId(undefined); 
-                  }}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="col-span-3"
                   disabled={!isAdminAuthenticated}
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="student-select" className="text-right">
-                  Учащийся
-                </Label>
-                <Select 
-                  value={selectedStudentId} 
-                  onValueChange={setSelectedStudentId}
-                  disabled={!isAdminAuthenticated || availableStudentsToDisplay.length === 0}
-                >
-                  <SelectTrigger id="student-select" className="col-span-3">
-                    <SelectValue placeholder="Выберите учащегося" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableStudentsToDisplay.length > 0 ? (
-                      availableStudentsToDisplay.map((student) => (
-                        <SelectItem key={student.id} value={student.id}>
-                          {student.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-students" disabled>
-                        {searchTerm ? "Совпадающих учащихся не найдено" : "В этой группе нет доступных учащихся"}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Label className="text-sm font-medium">Учащиеся в группе "{groups.find(g => g.id === selectedGroupId)?.name}"</Label>
+              <ScrollArea className="h-[200px] border rounded-md p-2">
+                {filteredStudentsToDisplay.length > 0 ? (
+                  filteredStudentsToDisplay.map((student) => (
+                    <div key={student.id} className="flex items-center space-x-2 py-1">
+                      <Checkbox
+                        id={`student-${student.id}`}
+                        checked={selectedStudentIds.includes(student.id)}
+                        onCheckedChange={(checked) => handleStudentSelectionChange(student.id, !!checked)}
+                        disabled={!isAdminAuthenticated}
+                      />
+                      <Label htmlFor={`student-${student.id}`} className="font-normal cursor-pointer">
+                        {student.name}
+                      </Label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    {searchTerm ? "Совпадающих учащихся не найдено" : "В этой группе нет учащихся"}
+                  </p>
+                )}
+              </ScrollArea>
             </>
           )}
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Отмена</Button>
-          <Button onClick={handleAssign} disabled={!selectedStudentId || !isAdminAuthenticated}>Назначить учащегося</Button>
+          <Button onClick={handleSaveAssignments} disabled={!isAdminAuthenticated || !laptop}>Сохранить назначения</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

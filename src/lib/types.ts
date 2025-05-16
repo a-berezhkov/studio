@@ -19,7 +19,7 @@ export interface Laptop {
   login: string;
   password?: string;
   locationId: number | null; 
-  studentId: string | null; 
+  studentIds: string[]; // Changed from studentId: string | null
   notes?: string;
   roomId: string; 
 }
@@ -33,4 +33,3 @@ export interface Student {
 export interface Desk {
   id: number;
 }
-
