@@ -71,7 +71,7 @@ export function StudentItem({ student, assignedLaptops = [], groupName, onEdit, 
             </TooltipProvider>
           )}
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={onEdit} disabled={!isAdminAuthenticated}><Edit3 className="mr-1.5 h-4 w-4" /> Редакт.</Button>
           <Button variant="destructive" size="sm" onClick={onDelete} disabled={!isAdminAuthenticated}><Trash2 className="mr-1.5 h-4 w-4" /> Удалить</Button>
         </div>

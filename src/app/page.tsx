@@ -273,8 +273,12 @@ export default function HomePage() {
           if (typeof formData.password === 'string' && formData.password.length > 0) { 
             updatedLaptop.password = formData.password;
           } else if (formData.password === "" && typeof lap.password === 'string') { 
+            // If password field is explicitly cleared, remove the password
+            // This case might need clarification: do we allow empty passwords or remove the field?
+            // For now, setting to empty string if explicitly cleared.
             updatedLaptop.password = ""; 
           }
+          // If password field is undefined (e.g. not touched in form), current password remains.
           return updatedLaptop;
         }
         return lap;
@@ -340,7 +344,9 @@ export default function HomePage() {
         if (lap.id === laptopIdToDrop) {
           return { ...lap, locationId: deskId, roomId: currentRoomId };
         }
+        // If there was a laptop at the target desk, move it to the source desk of the dropped laptop
         if (existingLaptopAtDesk && lap.id === existingLaptopAtDesk.id) {
+          // Ensure droppedLaptop.locationId is the original location before the drop
           return { ...lap, locationId: droppedLaptop.locationId, roomId: currentRoomId }; 
         }
         return lap;
@@ -437,7 +443,7 @@ export default function HomePage() {
     return (
       <div className="flex flex-col min-h-screen bg-background">
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container flex h-16 items-center justify-between">
+          <div className="container flex h-16 items-center justify-between px-4 sm:px-6 md:px-8">
             <div className="flex items-center gap-2">
               <Home className="h-6 w-6 text-primary" />
               <h1 className="text-xl font-bold">Навигатор по классу</h1>
@@ -465,7 +471,7 @@ export default function HomePage() {
           </Card>
         </main>
         <footer className="py-6 md:px-8 md:py-0 border-t">
-          <div className="container flex flex-col items-center justify-center gap-4 md:h-24 md:flex-row">
+          <div className="container flex flex-col items-center justify-center gap-4 md:h-24 md:flex-row px-4 sm:px-6">
             <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
               &copy; {new Date().getFullYear()} Навигатор по классу.
             </p>
@@ -488,32 +494,32 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
+        <div className="container flex h-16 items-center justify-between px-4 sm:px-6 md:px-8">
           <div className="flex items-center gap-2">
             <Home className="mr-2 h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold">Навигатор по классу {currentRoom ? `- ${currentRoom.name}` : ''}</h1>
+            <h1 className="text-lg sm:text-xl font-bold truncate max-w-[150px] sm:max-w-xs">Навигатор {currentRoom ? `- ${currentRoom.name}` : ''}</h1>
           </div>
-          <div className="flex items-center gap-2">
-             <Button asChild variant="outline">
+          <div className="flex items-center gap-1 sm:gap-2">
+             <Button asChild variant="outline" size="sm" className="px-2 md:px-3">
               <Link href="/admin/students">
-                <Users2Icon className="mr-2 h-4 w-4" /> 
-                Упр. группами и учащимися
+                <Users2Icon className="h-4 w-4 md:mr-2" /> 
+                <span className="hidden md:inline">Группы/Учащиеся</span>
               </Link>
             </Button>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="sm" className="px-2 md:px-3">
               <Link href="/admin/users">
-                <Users className="mr-2 h-4 w-4" />
-                Управление пользователями
+                <Users className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Пользователи</span>
               </Link>
             </Button>
-            <Button onClick={handleAdminLogout} variant="outline">
-              <LogOut className="mr-2 h-4 w-4" /> Выход администратора
+            <Button onClick={handleAdminLogout} variant="outline" size="sm" className="px-2 md:px-3">
+              <LogOut className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Выход</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8">
+      <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8">
         {!currentRoomId && rooms.length > 0 && (
              <Card className="mb-6">
                 <CardContent className="pt-6 text-center">
@@ -537,7 +543,7 @@ export default function HomePage() {
                 </CardContent>
              </Card>
         )}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           <div className="lg:col-span-2">
             {currentRoom ? (
               <ClassroomLayout
@@ -554,8 +560,8 @@ export default function HomePage() {
                 isAdminAuthenticated={isAdminAuthenticated}
               />
             ) : (
-              <Card className="h-[400px] flex items-center justify-center bg-muted/20 border-dashed">
-                <CardContent className="text-center">
+              <Card className="h-[300px] sm:h-[400px] flex items-center justify-center bg-muted/20 border-dashed">
+                <CardContent className="text-center p-4">
                    <Home className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-4" />
                   <p className="text-muted-foreground">Выберите или создайте кабинет для просмотра схемы.</p>
                 </CardContent>
@@ -563,13 +569,13 @@ export default function HomePage() {
             )}
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center"><Home className="mr-2 h-5 w-5" /> Управление кабинетами</CardTitle>
+                <CardTitle className="flex items-center text-xl"><Home className="mr-2 h-5 w-5" /> Управление кабинетами</CardTitle>
                 <CardDescription>Выберите, добавьте или отредактируйте кабинеты.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 <div className="space-y-1">
                   <Label htmlFor="room-select">Текущий кабинет</Label>
                   <Select
@@ -599,12 +605,12 @@ export default function HomePage() {
                   </Select>
                 </div>
                 {currentRoom && currentRoom.activeGroupIds && currentRoom.activeGroupIds.length > 0 && (
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-xs sm:text-sm text-muted-foreground">
                     <span className="font-medium text-foreground">Активные группы: </span>
                     {currentRoom.activeGroupIds.map(gid => groups.find(g => g.id === gid)?.name).filter(Boolean).join(', ') || "Не указаны"}
                   </div>
                 )}
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     onClick={() => { setEditingRoom(undefined); setIsRoomFormOpen(true); }}
                     className="flex-1"
@@ -638,7 +644,7 @@ export default function HomePage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center"><LaptopIconLucide className="mr-2 h-5 w-5" /> Ноутбуки</CardTitle>
+                <CardTitle className="flex items-center text-xl"><LaptopIconLucide className="mr-2 h-5 w-5" /> Ноутбуки</CardTitle>
                 <CardDescription>Управление ноутбуками в <span className="font-semibold">{currentRoom?.name || "выбранном кабинете"}</span>.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -649,7 +655,7 @@ export default function HomePage() {
                 >
                   <PlusCircle className="mr-2 h-4 w-4" /> Добавить новый ноутбук
                 </Button>
-                <ScrollArea className="h-[200px] pr-3">
+                <ScrollArea className="h-[200px] pr-2 sm:pr-3">
                   {!currentRoomId && <p className="text-sm text-muted-foreground text-center">Выберите кабинет для управления ноутбуками.</p>}
                   {currentRoomId && laptopsInCurrentRoom.length === 0 && <p className="text-sm text-muted-foreground text-center">В этом кабинете нет ноутбуков.</p>}
                   
@@ -695,7 +701,7 @@ export default function HomePage() {
       </main>
 
       <footer className="py-6 md:px-8 md:py-0 border-t">
-        <div className="container flex flex-col items-center justify-center gap-4 md:h-24 md:flex-row">
+        <div className="container flex flex-col items-center justify-center gap-4 md:h-24 md:flex-row px-4 sm:px-6">
           <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
             &copy; {new Date().getFullYear()} Навигатор по классу. Все права защищены.
           </p>

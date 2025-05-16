@@ -99,16 +99,18 @@ export function ClassroomLayout({
   }
 
   return (
-    <div className="bg-card p-4 md:p-6 rounded-lg shadow-md">
-      <h2 className="text-2xl font-semibold mb-6 text-center text-primary">Карта класса</h2>
-      <div
-        className="grid gap-3 md:gap-4"
-        style={{
-          gridTemplateColumns: `repeat(${maxVisualCols}, minmax(0, 1fr))`,
-        }}
-        aria-label="Сетка расположения в классе"
-      >
-        {gridCells}
+    <div className="bg-card p-2 sm:p-4 md:p-6 rounded-lg shadow-md">
+      <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 text-center text-primary">Карта класса</h2>
+      <div className="overflow-x-auto">
+        <div
+          className="grid gap-2 sm:gap-3 md:gap-4 min-w-[400px] sm:min-w-full" // ensure a minimum width for very constrained views before scrolling
+          style={{
+            gridTemplateColumns: `repeat(${maxVisualCols}, minmax(0, 1fr))`,
+          }}
+          aria-label="Сетка расположения в классе"
+        >
+          {gridCells}
+        </div>
       </div>
     </div>
   );

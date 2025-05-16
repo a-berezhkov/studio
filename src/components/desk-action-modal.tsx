@@ -105,7 +105,7 @@ export function DeskActionModal({
                 <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
                   <LaptopIcon className="mr-2 h-4 w-4" /> Действия с ноутбуком
                 </h3>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <Button variant="outline" onClick={() => onEditLaptop(laptop)} disabled={!isAdminAuthenticated}>
                     <Edit className="mr-2 h-4 w-4" /> Редакт. данные
                   </Button>
@@ -158,12 +158,12 @@ export function DeskActionModal({
                 ) : (
                   <p className="text-sm text-muted-foreground mb-2">Учащиеся не назначены.</p>
                 )}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <Button variant="outline" className="w-full" onClick={() => onManageAssignments(laptop)} disabled={!isAdminAuthenticated}>
                         <Settings2 className="mr-2 h-4 w-4" /> Управлять назначениями
                     </Button>
                     {students && students.length > 0 && (
-                        <Button variant="outline" onClick={() => { onUnassignAllStudents(laptop.id); }} disabled={!isAdminAuthenticated}>
+                        <Button variant="outline" className="w-full" onClick={() => { onUnassignAllStudents(laptop.id); }} disabled={!isAdminAuthenticated}>
                             <Trash2 className="mr-2 h-4 w-4" /> Снять все назначения
                         </Button>
                     )}

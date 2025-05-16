@@ -188,7 +188,7 @@ export default function AdminStudentsGroupsPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
+        <div className="container flex h-16 items-center justify-between px-4 sm:px-6 md:px-8">
           <div className="flex items-center gap-2">
             <Users2 className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold">Управление группами и учащимися</h1>
@@ -202,18 +202,19 @@ export default function AdminStudentsGroupsPage() {
         </div>
       </header>
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           {/* Groups Column */}
           <div className="md:col-span-1 space-y-4">
             <Card className="shadow-md">
               <CardHeader>
-                <div className="flex justify-between items-center">
-                    <CardTitle className="flex items-center"><Package className="mr-2 h-5 w-5"/>Группы</CardTitle>
+                <div className="flex flex-col items-start gap-2 sm:flex-row sm:justify-between sm:items-center">
+                    <CardTitle className="flex items-center text-xl"><Package className="mr-2 h-5 w-5"/>Группы</CardTitle>
                     <Button
                         onClick={() => { setEditingGroup(undefined); setIsGroupFormOpen(true); }}
                         size="sm"
                         variant="outline"
+                        className="w-full sm:w-auto"
                     >
                         <PlusCircle className="mr-2 h-4 w-4" /> Добавить группу
                     </Button>
@@ -222,7 +223,7 @@ export default function AdminStudentsGroupsPage() {
               </CardHeader>
               <CardContent>
                 {groups.length === 0 && <p className="text-sm text-muted-foreground text-center">Нет доступных групп. Нажмите "Добавить группу", чтобы начать.</p>}
-                <ScrollArea className="h-[calc(100vh-450px)] min-h-[200px] pr-3">
+                <ScrollArea className="h-60 md:h-[calc(100vh-450px)] md:min-h-[200px] pr-2 sm:pr-3">
                   {groups.map(group => (
                     <Card key={group.id} className="mb-3">
                       <CardHeader className="p-3">
@@ -249,11 +250,12 @@ export default function AdminStudentsGroupsPage() {
           <div className="md:col-span-2">
             <Card className="shadow-md">
               <CardHeader>
-                <div className="flex justify-between items-center">
-                    <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5"/>Учащиеся</CardTitle>
+                <div className="flex flex-col items-start gap-2 sm:flex-row sm:justify-between sm:items-center">
+                    <CardTitle className="flex items-center text-xl"><Users className="mr-2 h-5 w-5"/>Учащиеся</CardTitle>
                     <Button
                         onClick={() => { setEditingStudent(undefined); setIsStudentFormOpen(true); }}
                         disabled={groups.length === 0}
+                        className="w-full sm:w-auto"
                     >
                         <PlusCircle className="mr-2 h-4 w-4" /> Добавить нового учащегося
                     </Button>
@@ -269,7 +271,7 @@ export default function AdminStudentsGroupsPage() {
                 )}
 
                 {groups.length > 0 && allStudents.length > 0 && (
-                  <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] pr-3 mt-4">
+                  <ScrollArea className="h-96 md:h-[calc(100vh-350px)] md:min-h-[300px] pr-2 sm:pr-3 mt-4">
                     <Accordion type="multiple" className="w-full" defaultValue={groups.map(g=>g.id)}>
                        {groups.map(group => {
                         const studentsInGroup = allStudents.filter(s => s.groupId === group.id);
@@ -309,7 +311,7 @@ export default function AdminStudentsGroupsPage() {
       </main>
       
       <footer className="py-6 md:px-8 md:py-0 border-t">
-        <div className="container flex flex-col items-center justify-center gap-4 md:h-24 md:flex-row">
+        <div className="container flex flex-col items-center justify-center gap-4 md:h-24 md:flex-row px-4 sm:px-6">
           <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
             &copy; {new Date().getFullYear()} Навигатор по классу. Управление учащимися и группами.
           </p>
