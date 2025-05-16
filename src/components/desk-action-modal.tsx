@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
-import { Laptop as LaptopIcon, User, Edit, KeyRound, StickyNote, PlusCircle, UserMinus, Package } from "lucide-react"; 
+import { Laptop as LaptopIcon, User, Edit, KeyRound, StickyNote, PlusCircle, UserMinus, Package, Unlink } from "lucide-react"; 
 
 interface DeskActionModalProps {
   open: boolean;
@@ -29,6 +29,7 @@ interface DeskActionModalProps {
   onUnassignStudent: (laptopId: string) => void;
   onSaveNotes: (laptopId: string, notes: string) => void;
   onAddLaptopToDesk: (desk: Desk) => void;
+  onUnassignLaptopFromDesk?: (laptopId: string) => void; // New prop
   groups: Group[]; 
   isAdminAuthenticated: boolean;
 }
@@ -43,6 +44,7 @@ export function DeskActionModal({
   onUnassignStudent,
   onSaveNotes,
   onAddLaptopToDesk,
+  onUnassignLaptopFromDesk, // New prop
   groups, 
   isAdminAuthenticated,
 }: DeskActionModalProps) {
@@ -66,6 +68,13 @@ export function DeskActionModal({
       onSaveNotes(laptop.id, currentNotes);
     }
   };
+
+  const handleUnassignFromDesk = () => {
+    if (laptop && onUnassignLaptopFromDesk && isAdminAuthenticated) {
+      onUnassignLaptopFromDesk(laptop.id);
+      onOpenChange(false); // Close modal after action
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -97,6 +106,17 @@ export function DeskActionModal({
                     <KeyRound className="mr-2 h-4 w-4" /> Просмотр учетных данных
                   </Button>
                 </div>
+                {onUnassignLaptopFromDesk && (
+                     <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2 w-full" 
+                        onClick={handleUnassignFromDesk} 
+                        disabled={!isAdminAuthenticated}
+                    >
+                        <Unlink className="mr-2 h-4 w-4" /> Убрать ноутбук со стола
+                    </Button>
+                )}
               </div>
 
               <Separator />
@@ -164,3 +184,4 @@ export function DeskActionModal({
     </Dialog>
   );
 }
+

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, DragEvent, useCallback } from "react";
-import type { Room, Laptop, Student, Desk, Group } from "@/lib/types"; // Added Group
+import type { Room, Laptop, Student, Desk, Group } from "@/lib/types";
 import { ClassroomLayout } from "@/components/classroom-layout";
 import { LaptopItem } from "@/components/laptop-item";
 import { LaptopFormDialog } from "@/components/laptop-form-dialog";
@@ -29,7 +29,7 @@ export type DeskActionData = {
 };
 
 const DEFAULT_ROOM_ID = "room-default";
-const DEFAULT_GROUP_ID = "group-default"; // Added
+const DEFAULT_GROUP_ID = "group-default";
 const ADMIN_LOGIN = "admin";
 const ADMIN_PASSWORD = "password";
 
@@ -43,7 +43,7 @@ export default function HomePage() {
   
   const [laptops, setLaptops] = useState<Laptop[]>([]);
   const [students, setStudents] = useState<Student[]>([]); 
-  const [groups, setGroups] = useState<Group[]>([]); // Added groups state
+  const [groups, setGroups] = useState<Group[]>([]);
   const [desks, setDesks] = useState<Desk[]>([]);
 
   const [isLaptopFormOpen, setIsLaptopFormOpen] = useState(false);
@@ -68,10 +68,16 @@ export default function HomePage() {
   const currentRoom = rooms.find(r => r.id === currentRoomId);
 
   useEffect(() => {
+    const storedAuth = localStorage.getItem('isAdminAuthenticated');
+    if (storedAuth === 'true') {
+      setIsAdminAuthenticated(true);
+      setIsLoginDialogOpen(false);
+    }
+
     const storedRooms = localStorage.getItem('rooms');
     const storedLaptops = localStorage.getItem('laptops');
     const storedStudents = localStorage.getItem('students');
-    const storedGroups = localStorage.getItem('groups'); // Load groups
+    const storedGroups = localStorage.getItem('groups');
     const storedCurrentRoomId = localStorage.getItem('currentRoomId');
     let defaultRoomCreated = false;
     let defaultGroupCreated = false;
@@ -86,12 +92,13 @@ export default function HomePage() {
         cols: 6,
         corridorsAfterRows: [],
         corridorsAfterCols: [],
+        activeGroupIds: [DEFAULT_GROUP_ID],
       };
       setRooms([defaultRoom]);
       defaultRoomCreated = true;
     }
 
-    if (storedGroups) { // Load or create default group
+    if (storedGroups) {
         setGroups(JSON.parse(storedGroups));
     } else {
         const defaultGroup: Group = { id: DEFAULT_GROUP_ID, name: "Нераспределенные" };
@@ -112,14 +119,14 @@ export default function HomePage() {
     if (storedStudents) {
         setStudents(JSON.parse(storedStudents));
     } else {
-        const mockStudents: Student[] = [ // Updated mock students with groupId
+        const mockStudents: Student[] = [
             { id: "student-1", name: "Алиса Селезнева", groupId: DEFAULT_GROUP_ID },
             { id: "student-2", name: "Иван Царевич", groupId: DEFAULT_GROUP_ID },
         ];
         setStudents(mockStudents);
     }
     
-    const finalRooms = defaultRoomCreated ? [{ id: DEFAULT_ROOM_ID, name: "Главный класс", rows: 5, cols: 6, corridorsAfterRows: [], corridorsAfterCols: [] }] : JSON.parse(storedRooms || "[]");
+    const finalRooms = defaultRoomCreated ? [{ id: DEFAULT_ROOM_ID, name: "Главный класс", rows: 5, cols: 6, corridorsAfterRows: [], corridorsAfterCols: [], activeGroupIds: [DEFAULT_GROUP_ID] }] : JSON.parse(storedRooms || "[]");
 
     if (storedCurrentRoomId && finalRooms.find((r: Room) => r.id === storedCurrentRoomId)) {
         setCurrentRoomId(storedCurrentRoomId);
@@ -154,14 +161,14 @@ export default function HomePage() {
     } else {
       setDesks([]);
     }
-  }, [currentRoomId, rooms, currentRoom?.rows, currentRoom?.cols]);
+  }, [currentRoomId, rooms, currentRoom?.rows, currentRoom?.cols]); // currentRoom dependency to react to its changes
 
   useEffect(() => {
-    if (isAdminAuthenticated) {
+    if (isAdminAuthenticated) { // Save only if admin is authenticated
       localStorage.setItem('rooms', JSON.stringify(rooms));
       localStorage.setItem('laptops', JSON.stringify(laptops));
       localStorage.setItem('students', JSON.stringify(students)); 
-      localStorage.setItem('groups', JSON.stringify(groups)); // Save groups
+      localStorage.setItem('groups', JSON.stringify(groups));
       if (currentRoomId) localStorage.setItem('currentRoomId', currentRoomId);
     }
   }, [rooms, laptops, students, groups, currentRoomId, isAdminAuthenticated]);
@@ -171,6 +178,7 @@ export default function HomePage() {
     if (login === ADMIN_LOGIN && password_param === ADMIN_PASSWORD) {
       setIsAdminAuthenticated(true);
       setIsLoginDialogOpen(false);
+      localStorage.setItem('isAdminAuthenticated', 'true');
       toast({ title: "Вход выполнен", description: "Добро пожаловать, Администратор!" });
     } else {
       toast({ title: "Ошибка входа", description: "Неверные учетные данные.", variant: "destructive" });
@@ -180,6 +188,7 @@ export default function HomePage() {
   const handleAdminLogout = () => {
     setIsAdminAuthenticated(false);
     setIsLoginDialogOpen(true); 
+    localStorage.removeItem('isAdminAuthenticated');
     toast({ title: "Выход выполнен", description: "Вы вышли из системы." });
   };
 
@@ -191,6 +200,7 @@ export default function HomePage() {
       cols: data.cols,
       corridorsAfterRows: data.corridorsAfterRows || [],
       corridorsAfterCols: data.corridorsAfterCols || [],
+      activeGroupIds: data.activeGroupIds || [],
     };
     if (roomId) {
       setRooms(prevRooms => prevRooms.map(r => r.id === roomId ? { ...r, ...roomData } : r));
@@ -237,7 +247,7 @@ export default function HomePage() {
           if (typeof formData.password === 'string' && formData.password.length > 0) { 
             updatedLaptop.password = formData.password;
           } else if (formData.password === "" && typeof lap.password === 'string') { 
-            updatedLaptop.password = "";
+            updatedLaptop.password = ""; // Explicitly clear password if empty string is provided
           }
           return updatedLaptop;
         }
@@ -304,6 +314,7 @@ export default function HomePage() {
         if (lap.id === laptopIdToDrop) {
           return { ...lap, locationId: deskId, roomId: currentRoomId };
         }
+        // If there was a laptop at the target desk, move it to the source desk of the dropped laptop (swap)
         if (existingLaptopAtDesk && lap.id === existingLaptopAtDesk.id) {
           return { ...lap, locationId: droppedLaptop.locationId, roomId: currentRoomId }; 
         }
@@ -318,6 +329,7 @@ export default function HomePage() {
     
     let newLaptops = [...laptops];
 
+    // Unassign the student from any OTHER laptop they might be assigned to globally
     newLaptops = newLaptops.map(otherLap => {
       if (otherLap.studentId === studentId && otherLap.id !== laptopId) {
         return { ...otherLap, studentId: null };
@@ -325,6 +337,7 @@ export default function HomePage() {
       return otherLap;
     });
 
+    // Assign the student to the target laptop
     newLaptops = newLaptops.map(lap => {
       if (lap.id === laptopId) { 
         return { ...lap, studentId };
@@ -354,7 +367,7 @@ export default function HomePage() {
   const handleUnassignLocation = (laptopId: string) => {
     if (!isAdminAuthenticated || !currentRoomId) return;
     setLaptops(laps => laps.map(lap => {
-      if (lap.id === laptopId && lap.roomId === currentRoomId) {
+      if (lap.id === laptopId && lap.roomId === currentRoomId) { // Check if laptop is in current room
         return { ...lap, locationId: null };
       }
       return lap;
@@ -385,6 +398,7 @@ export default function HomePage() {
       return lap;
     }));
     toast({ title: "Заметки сохранены", description: "Заметки для ноутбука обновлены." });
+    // Update notes in the action modal if it's open for this laptop
     if (currentActionDesk?.laptop?.id === laptopId) {
         setCurrentActionDesk(prev => prev ? {...prev, laptop: {...prev.laptop!, notes}} : null);
     }
@@ -539,7 +553,7 @@ export default function HomePage() {
                             setCurrentRoomId(value);
                         }
                     }}
-                    disabled={!isAdminAuthenticated || rooms.length === 0 && !currentRoomId}
+                    disabled={!isAdminAuthenticated || (rooms.length === 0 && !currentRoomId)}
                   >
                     <SelectTrigger id="room-select">
                       <SelectValue placeholder="Выберите кабинет" />
@@ -555,6 +569,12 @@ export default function HomePage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {currentRoom && currentRoom.activeGroupIds && currentRoom.activeGroupIds.length > 0 && (
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">Активные группы: </span>
+                    {currentRoom.activeGroupIds.map(gid => groups.find(g => g.id === gid)?.name).filter(Boolean).join(', ') || "Не указаны"}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Button
                     onClick={() => { setEditingRoom(undefined); setIsRoomFormOpen(true); }}
@@ -581,7 +601,7 @@ export default function HomePage() {
                         className="w-full"
                         disabled={!isAdminAuthenticated}
                     >
-                        <Trash2 className="mr-2 h-4 w-4" /> Удалить кабинет
+                        <Trash2 className="mr-2 h-4 w-4" /> Удалить текущий кабинет
                     </Button>
                 )}
               </CardContent>
@@ -620,6 +640,7 @@ export default function HomePage() {
                     />
                   ))}
                    {assignedLaptopsInCurrentRoom.length > 0 && unassignedLaptopsInCurrentRoom.length > 0 && <Separator className="my-3"/>}
+                   {/* Display assigned laptops last or separately */}
                    {assignedLaptopsInCurrentRoom.map(laptop => (
                     <LaptopItem
                       key={laptop.id}
@@ -662,6 +683,7 @@ export default function HomePage() {
         onOpenChange={setIsRoomFormOpen}
         onSubmit={handleAddOrUpdateRoom}
         initialData={editingRoom}
+        allGroups={groups}
       />
       <LaptopFormDialog
         open={isLaptopFormOpen}
@@ -692,6 +714,7 @@ export default function HomePage() {
         onViewCredentials={(laptop) => { setLaptopToView(laptop); setIsViewCredentialsOpen(true); }}
         onAssignStudent={(laptop) => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true); }}
         onUnassignStudent={handleUnassignStudentFromLaptop}
+        onUnassignLaptopFromDesk={handleUnassignLocation} // Pass the handler
         onSaveNotes={handleSaveNotes}
         onAddLaptopToDesk={(desk) => { 
             setLaptopToCreateAtDesk(desk); 
@@ -721,3 +744,4 @@ export default function HomePage() {
     </div>
   );
 }
+

@@ -11,6 +11,7 @@ export interface Room {
   cols: number;
   corridorsAfterRows?: number[]; // 1-indexed rows after which a corridor exists
   corridorsAfterCols?: number[]; // 1-indexed columns after which a corridor exists
+  activeGroupIds?: string[]; // IDs of groups considered active in this room
 }
 
 export interface Laptop {
@@ -26,9 +27,10 @@ export interface Laptop {
 export interface Student {
   id: string;
   name: string;
-  groupId: string; // Changed from groupNumber, removed roomId
+  groupId: string;
 }
 
 export interface Desk {
   id: number;
 }
+
