@@ -2,7 +2,7 @@
 "use client";
 
 import type { Laptop, Student, Desk } from "@/lib/types";
-import type { DeskActionData } from "@/app/page"; // Assuming type is exported from page.tsx
+import type { DeskActionData } from "@/app/page"; 
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +29,7 @@ interface DeskActionModalProps {
   onUnassignStudent: (laptopId: string) => void;
   onSaveNotes: (laptopId: string, notes: string) => void;
   onAddLaptopToDesk: (desk: Desk) => void;
+  isAdminAuthenticated: boolean;
 }
 
 export function DeskActionModal({
@@ -41,6 +42,7 @@ export function DeskActionModal({
   onUnassignStudent,
   onSaveNotes,
   onAddLaptopToDesk,
+  isAdminAuthenticated,
 }: DeskActionModalProps) {
   const [currentNotes, setCurrentNotes] = useState("");
 
@@ -57,9 +59,8 @@ export function DeskActionModal({
   const { desk, laptop, student } = deskActionData;
 
   const handleSaveNotes = () => {
-    if (laptop) {
+    if (laptop && isAdminAuthenticated) {
       onSaveNotes(laptop.id, currentNotes);
-      // Optionally close modal or show toast, for now, notes save in background
     }
   };
 
@@ -86,7 +87,7 @@ export function DeskActionModal({
                   <LaptopIcon className="mr-2 h-4 w-4" /> Laptop Actions
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" onClick={() => onEditLaptop(laptop)}>
+                  <Button variant="outline" onClick={() => onEditLaptop(laptop)} disabled={!isAdminAuthenticated}>
                     <Edit className="mr-2 h-4 w-4" /> Edit Details
                   </Button>
                   <Button variant="outline" onClick={() => onViewCredentials(laptop)}>
@@ -105,16 +106,16 @@ export function DeskActionModal({
                   <div className="space-y-2">
                      <p className="text-sm">Assigned to: <span className="font-semibold">{student.name}</span> ({student.groupNumber})</p>
                     <div className="grid grid-cols-2 gap-2">
-                        <Button variant="outline" onClick={() => onAssignStudent(laptop)}>
+                        <Button variant="outline" onClick={() => onAssignStudent(laptop)} disabled={!isAdminAuthenticated}>
                             <User className="mr-2 h-4 w-4" /> Change Student
                         </Button>
-                        <Button variant="outline" onClick={() => { onUnassignStudent(laptop.id); /* Modal will re-render or parent handles state */ }}>
+                        <Button variant="outline" onClick={() => { onUnassignStudent(laptop.id); }} disabled={!isAdminAuthenticated}>
                             <UserMinus className="mr-2 h-4 w-4" /> Unassign Student
                         </Button>
                     </div>
                   </div>
                 ) : (
-                  <Button variant="outline" className="w-full" onClick={() => onAssignStudent(laptop)}>
+                  <Button variant="outline" className="w-full" onClick={() => onAssignStudent(laptop)} disabled={!isAdminAuthenticated}>
                     <User className="mr-2 h-4 w-4" /> Assign Student
                   </Button>
                 )}
@@ -131,8 +132,9 @@ export function DeskActionModal({
                   value={currentNotes}
                   onChange={(e) => setCurrentNotes(e.target.value)}
                   className="min-h-[80px]"
+                  disabled={!isAdminAuthenticated}
                 />
-                <Button onClick={handleSaveNotes} size="sm" className="mt-2">
+                <Button onClick={handleSaveNotes} size="sm" className="mt-2" disabled={!isAdminAuthenticated}>
                   Save Notes
                 </Button>
               </div>
@@ -140,7 +142,7 @@ export function DeskActionModal({
           ) : (
             <div className="text-center">
               <p className="text-muted-foreground mb-4">This desk is empty.</p>
-              <Button onClick={() => onAddLaptopToDesk(desk)}>
+              <Button onClick={() => onAddLaptopToDesk(desk)} disabled={!isAdminAuthenticated}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Laptop to this Desk
               </Button>
             </div>
@@ -158,3 +160,5 @@ export function DeskActionModal({
     </Dialog>
   );
 }
+
+    

@@ -11,9 +11,10 @@ interface StudentItemProps {
   assignedLaptop?: Laptop;
   onEdit: () => void;
   onDelete: () => void;
+  isAdminAuthenticated: boolean;
 }
 
-export function StudentItem({ student, assignedLaptop, onEdit, onDelete }: StudentItemProps) {
+export function StudentItem({ student, assignedLaptop, onEdit, onDelete, isAdminAuthenticated }: StudentItemProps) {
   return (
     <Card className="mb-4 shadow-md hover:shadow-lg transition-shadow bg-card" aria-label={`Student: ${student.name}`}>
       <CardHeader className="pb-3">
@@ -33,10 +34,12 @@ export function StudentItem({ student, assignedLaptop, onEdit, onDelete }: Stude
           <p className="text-sm text-muted-foreground mb-3">Not assigned to any laptop.</p>
         )}
         <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={onEdit}><Edit3 className="mr-1.5 h-4 w-4" /> Edit</Button>
-          <Button variant="destructive" size="sm" onClick={onDelete}><Trash2 className="mr-1.5 h-4 w-4" /> Delete</Button>
+          <Button variant="outline" size="sm" onClick={onEdit} disabled={!isAdminAuthenticated}><Edit3 className="mr-1.5 h-4 w-4" /> Edit</Button>
+          <Button variant="destructive" size="sm" onClick={onDelete} disabled={!isAdminAuthenticated}><Trash2 className="mr-1.5 h-4 w-4" /> Delete</Button>
         </div>
       </CardContent>
     </Card>
   );
 }
+
+    

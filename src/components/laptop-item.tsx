@@ -18,6 +18,7 @@ interface LaptopItemProps {
   onAssignStudent: () => void;
   onUnassignStudent?: () => void; 
   onUnassignLocation?: () => void;
+  isAdminAuthenticated: boolean;
 }
 
 export function LaptopItem({
@@ -30,17 +31,20 @@ export function LaptopItem({
   onViewCredentials,
   onAssignStudent,
   onUnassignStudent,
-  onUnassignLocation
+  onUnassignLocation,
+  isAdminAuthenticated,
 }: LaptopItemProps) {
   const handleDragStart = (event: DragEvent<HTMLDivElement>) => {
-    if (onDragStart) {
+    if (onDragStart && isAdminAuthenticated) {
       onDragStart(event, laptop.id);
+    } else {
+      event.preventDefault();
     }
   };
 
   return (
     <Card 
-      draggable={isDraggable} 
+      draggable={isDraggable && isAdminAuthenticated} 
       onDragStart={handleDragStart} 
       className="mb-4 shadow-md hover:shadow-lg transition-shadow bg-card"
       aria-label={`Laptop: ${laptop.login}`}
@@ -52,7 +56,7 @@ export function LaptopItem({
             <CardTitle className="text-lg">{laptop.login}</CardTitle>
           </div>
           {laptop.locationId && onUnassignLocation && (
-            <Button variant="ghost" size="icon" onClick={onUnassignLocation} aria-label="Unassign from desk">
+            <Button variant="ghost" size="icon" onClick={onUnassignLocation} aria-label="Unassign from desk" disabled={!isAdminAuthenticated}>
               <Unlink className="w-4 h-4" />
             </Button>
           )}
@@ -69,27 +73,29 @@ export function LaptopItem({
           <p className="text-sm text-muted-foreground mb-3">No student assigned.</p>
         )}
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={onEdit}><Edit3 className="mr-1.5 h-4 w-4" /> Edit</Button>
+          <Button variant="outline" size="sm" onClick={onEdit} disabled={!isAdminAuthenticated}><Edit3 className="mr-1.5 h-4 w-4" /> Edit</Button>
           <Button variant="outline" size="sm" onClick={onViewCredentials}><Eye className="mr-1.5 h-4 w-4" /> Credentials</Button>
-          {laptop.locationId && (
+          {laptop.locationId && ( // Actions relevant if laptop is on a desk
             assignedStudent && onUnassignStudent ? (
-              <Button variant="outline" size="sm" onClick={onUnassignStudent}>
+              <Button variant="outline" size="sm" onClick={onUnassignStudent} disabled={!isAdminAuthenticated}>
                 <User className="mr-1.5 h-4 w-4" /> Unassign Student
               </Button>
             ) : (
-              <Button variant="outline" size="sm" onClick={onAssignStudent}>
+              <Button variant="outline" size="sm" onClick={onAssignStudent} disabled={!isAdminAuthenticated}>
                 <User className="mr-1.5 h-4 w-4" /> Assign Student
               </Button>
             )
           )}
-          {!laptop.locationId && ( // Only show assign student if not on map for simplicity, or always show if laptop exists.
-             <Button variant="outline" size="sm" onClick={onAssignStudent} disabled={!!laptop.locationId}>
+          {!laptop.locationId && ( // Assign student if laptop is unassigned from a desk
+             <Button variant="outline" size="sm" onClick={onAssignStudent} disabled={!isAdminAuthenticated}>
               <User className="mr-1.5 h-4 w-4" /> Assign Student
             </Button>
           )}
-          <Button variant="destructive" size="sm" onClick={onDelete}><Trash2 className="mr-1.5 h-4 w-4" /> Delete</Button>
+          <Button variant="destructive" size="sm" onClick={onDelete} disabled={!isAdminAuthenticated}><Trash2 className="mr-1.5 h-4 w-4" /> Delete</Button>
         </div>
       </CardContent>
     </Card>
   );
 }
+
+    

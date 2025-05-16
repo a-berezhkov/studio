@@ -10,10 +10,11 @@ interface ClassroomLayoutProps {
   students: Student[];
   onDropLaptopOnDesk: (deskId: number, laptopId: string) => void;
   onDeskClick: (deskId: number, laptop: Laptop | undefined) => void;
-  rows: number; // Number of actual desk rows
-  cols: number; // Number of actual desk columns
-  corridorsAfterRows: number[]; // 1-indexed array of row numbers after which a corridor appears
-  corridorsAfterCols: number[]; // 1-indexed array of col numbers after which a corridor appears
+  rows: number; 
+  cols: number; 
+  corridorsAfterRows: number[]; 
+  corridorsAfterCols: number[];
+  isAdminAuthenticated: boolean;
 }
 
 const CorridorCell = () => (
@@ -33,6 +34,7 @@ export function ClassroomLayout({
   cols,
   corridorsAfterRows = [],
   corridorsAfterCols = [],
+  isAdminAuthenticated,
 }: ClassroomLayoutProps) {
   
   const getLaptopAtDesk = (deskId: number): Laptop | undefined => {
@@ -46,22 +48,20 @@ export function ClassroomLayout({
 
   const gridCells: JSX.Element[] = [];
   let deskIndex = 0;
-  let maxVisualCols = cols; // Start with base columns
+  let maxVisualCols = cols; 
 
-  // Pre-calculate maxVisualCols for the grid-template-columns
-  // This considers the number of actual columns plus any specified column corridors
   let tempVisualCols = cols;
-  for (let c = 0; c < cols -1; c++) { // Iterate up to cols-1 because corridor is *after* a col
-      if(corridorsAfterCols.includes(c + 1)) { // c+1 is 1-indexed column
+  for (let c = 0; c < cols -1; c++) { 
+      if(corridorsAfterCols.includes(c + 1)) { 
           tempVisualCols++;
       }
   }
   maxVisualCols = tempVisualCols;
 
 
-  for (let r = 0; r < rows; r++) { // Iterate 0-indexed actual desk rows
+  for (let r = 0; r < rows; r++) { 
     const currentRowVisualCells: JSX.Element[] = [];
-    for (let c = 0; c < cols; c++) { // Iterate 0-indexed actual desk columns
+    for (let c = 0; c < cols; c++) { 
       const currentDesk = desks[deskIndex++];
       if (!currentDesk) continue;
 
@@ -74,23 +74,21 @@ export function ClassroomLayout({
           desk={currentDesk}
           laptop={laptopOnDesk}
           student={studentAssigned}
-          onDrop={(laptopId) => onDropLaptopOnDesk(currentDesk.id, laptopId)}
+          onDrop={(laptopId) => {
+            if (isAdminAuthenticated) onDropLaptopOnDesk(currentDesk.id, laptopId);
+          }}
           onClick={() => onDeskClick(currentDesk.id, laptopOnDesk)}
+          canDrop={isAdminAuthenticated}
         />
       );
 
-      // Add a column corridor *after* the current column 'c' (1-indexed c+1)
-      // if it's specified and not after the very last column
       if (corridorsAfterCols.includes(c + 1) && c < cols - 1) {
         currentRowVisualCells.push(<CorridorCell key={`col-corridor-${r}-${c}`} />);
       }
     }
     gridCells.push(...currentRowVisualCells);
 
-    // Add a row corridor *after* the current row 'r' (1-indexed r+1)
-    // if it's specified and not after the very last row
     if (corridorsAfterRows.includes(r + 1) && r < rows - 1) {
-      // The row corridor should span the full visual width determined by maxVisualCols
       for (let cg = 0; cg < maxVisualCols; cg++) {
          gridCells.push(<CorridorCell key={`row-corridor-${r}-${cg}`} />);
       }
@@ -112,3 +110,5 @@ export function ClassroomLayout({
     </div>
   );
 }
+
+    

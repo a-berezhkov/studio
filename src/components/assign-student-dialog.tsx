@@ -25,17 +25,15 @@ interface AssignStudentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   laptop: Laptop | null;
-  students: Student[]; // Should be students in the current room
-  laptops: Laptop[]; // Should be laptops in the current room
+  students: Student[]; 
+  laptops: Laptop[]; 
   onAssign: (laptopId: string, studentId: string) => void;
+  isAdminAuthenticated: boolean;
 }
 
-export function AssignStudentDialog({ open, onOpenChange, laptop, students, laptops, onAssign }: AssignStudentDialogProps) {
+export function AssignStudentDialog({ open, onOpenChange, laptop, students, laptops, onAssign, isAdminAuthenticated }: AssignStudentDialogProps) {
   const [selectedStudentId, setSelectedStudentId] = useState<string | undefined>(undefined);
   
-  // Students available for assignment are those in the current room
-  // who are not already assigned to any other laptop in the current room,
-  // OR the student currently assigned to THIS laptop (if any).
   const assignedStudentIdsInCurrentRoom = new Set(
     laptops.map(l => l.studentId).filter(Boolean)
   );
@@ -52,7 +50,7 @@ export function AssignStudentDialog({ open, onOpenChange, laptop, students, lapt
   }, [open, laptop]);
 
   const handleAssign = () => {
-    if (laptop && selectedStudentId) {
+    if (laptop && selectedStudentId && isAdminAuthenticated) {
       onAssign(laptop.id, selectedStudentId);
       onOpenChange(false);
     }
@@ -77,6 +75,7 @@ export function AssignStudentDialog({ open, onOpenChange, laptop, students, lapt
             <Select 
               value={selectedStudentId} 
               onValueChange={setSelectedStudentId}
+              disabled={!isAdminAuthenticated}
             >
               <SelectTrigger id="student-select" className="col-span-3">
                 <SelectValue placeholder="Select a student" />
@@ -97,9 +96,11 @@ export function AssignStudentDialog({ open, onOpenChange, laptop, students, lapt
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleAssign} disabled={!selectedStudentId}>Assign Student</Button>
+          <Button onClick={handleAssign} disabled={!selectedStudentId || !isAdminAuthenticated}>Assign Student</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+    

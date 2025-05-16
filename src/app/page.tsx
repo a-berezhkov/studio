@@ -12,14 +12,16 @@ import { RoomFormDialog, type RoomSubmitData } from "@/components/room-form-dial
 import { AssignStudentDialog } from "@/components/assign-student-dialog";
 import { ViewCredentialsDialog } from "@/components/view-credentials-dialog";
 import { DeskActionModal } from "@/components/desk-action-modal";
+import { AdminLoginDialog } from "@/components/admin-login-dialog"; // New import
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Edit3, Trash2, Eye, UserPlus, Users, Laptop as LaptopIconLucide, Home, Edit } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, Eye, UserPlus, Users, Laptop as LaptopIconLucide, Home, Edit, LogIn, LogOut } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 export type DeskActionData = {
   desk: Desk;
@@ -28,8 +30,14 @@ export type DeskActionData = {
 };
 
 const DEFAULT_ROOM_ID = "room-default";
+const ADMIN_LOGIN = "admin";
+const ADMIN_PASSWORD = "password";
 
 export default function HomePage() {
+  const { toast } = useToast();
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
+
   const [rooms, setRooms] = useState<Room[]>([]);
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   
@@ -94,7 +102,6 @@ export default function HomePage() {
     if (currentRoom) {
       const newDesks = Array.from({ length: currentRoom.rows * currentRoom.cols }, (_, i) => ({ id: i + 1 }));
       setDesks(newDesks);
-      // Reset laptop locations if they become invalid due to room dimension changes
       setLaptops(prevLaptops => prevLaptops.map(lap => {
         if (lap.roomId === currentRoom.id && lap.locationId && lap.locationId > newDesks.length) {
           return { ...lap, locationId: null }; 
@@ -104,10 +111,25 @@ export default function HomePage() {
     } else {
       setDesks([]);
     }
-  }, [currentRoomId, rooms, currentRoom?.rows, currentRoom?.cols]); // Added currentRoom.rows/cols dependencies
+  }, [currentRoomId, rooms, currentRoom?.rows, currentRoom?.cols]);
 
+  const handleAdminLogin = (login: string, password_param: string) => {
+    if (login === ADMIN_LOGIN && password_param === ADMIN_PASSWORD) {
+      setIsAdminAuthenticated(true);
+      setIsLoginDialogOpen(false);
+      toast({ title: "Login Successful", description: "Welcome, Admin!" });
+    } else {
+      toast({ title: "Login Failed", description: "Invalid credentials.", variant: "destructive" });
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdminAuthenticated(false);
+    toast({ title: "Logged Out", description: "You have been logged out." });
+  };
 
   const handleAddOrUpdateRoom = (data: RoomSubmitData, roomId?: string) => {
+    if (!isAdminAuthenticated) return;
     const roomData: Omit<Room, 'id'> = {
       name: data.name,
       rows: data.rows,
@@ -128,9 +150,9 @@ export default function HomePage() {
   };
 
   const handleDeleteRoom = (roomIdToDelete: string) => {
+    if (!isAdminAuthenticated) return;
     if (rooms.length <= 1) {
-      // Potentially show a toast or alert here
-      console.warn("Cannot delete the last room.");
+      toast({ title: "Action Denied", description: "Cannot delete the last room.", variant: "destructive"});
       setItemToDelete(null);
       return;
     }
@@ -138,6 +160,7 @@ export default function HomePage() {
   };
   
   const confirmDeleteRoom = (roomIdToDelete: string) => {
+     if (!isAdminAuthenticated) return;
      setLaptops(prevLaptops => prevLaptops.filter(lap => lap.roomId !== roomIdToDelete));
      setStudents(prevStudents => prevStudents.filter(stu => stu.roomId !== roomIdToDelete));
      setRooms(prevRooms => {
@@ -151,12 +174,12 @@ export default function HomePage() {
   }
 
   const handleAddOrUpdateLaptop = (formData: { login: string; password?: string }, laptopId?: string) => {
-    if (!currentRoomId) return;
+    if (!isAdminAuthenticated || !currentRoomId) return;
     if (laptopId) { 
       setLaptops(laps => laps.map(lap => {
         if (lap.id === laptopId) {
           const updatedLaptop = { ...lap, login: formData.login };
-          if (typeof formData.password === 'string') {
+          if (typeof formData.password === 'string') { // Check if password was actually provided
             updatedLaptop.password = formData.password;
           }
           return updatedLaptop;
@@ -184,7 +207,7 @@ export default function HomePage() {
   };
 
   const handleAddOrUpdateStudent = (data: { name: string; groupNumber: string }, studentId?: string) => {
-    if (!currentRoomId) return;
+    if (!isAdminAuthenticated || !currentRoomId) return;
     if (studentId) {
       setStudents(stus => stus.map(stu => stu.id === studentId ? { ...stu, ...data, roomId: currentRoomId } : stu));
     } else {
@@ -201,7 +224,7 @@ export default function HomePage() {
   };
   
   const confirmDeleteItem = () => {
-    if (!itemToDelete) return;
+    if (!isAdminAuthenticated || !itemToDelete) return;
     if (itemToDelete.type === 'laptop') {
       setLaptops(laps => laps.filter(lap => lap.id !== itemToDelete.id));
     } else if (itemToDelete.type === 'student') {
@@ -213,16 +236,27 @@ export default function HomePage() {
     setItemToDelete(null);
   };
 
-  const handleDeleteLaptop = (laptopId: string) => setItemToDelete({ type: 'laptop', id: laptopId });
-  const handleDeleteStudent = (studentId: string) => setItemToDelete({ type: 'student', id: studentId });
+  const handleDeleteLaptop = (laptopId: string) => {
+    if (!isAdminAuthenticated) return;
+    setItemToDelete({ type: 'laptop', id: laptopId });
+  }
+  const handleDeleteStudent = (studentId: string) => {
+    if (!isAdminAuthenticated) return;
+    setItemToDelete({ type: 'student', id: studentId });
+  }
 
   const handleDragStart = (event: DragEvent<HTMLDivElement>, laptopId: string) => {
+    if (!isAdminAuthenticated) {
+      event.preventDefault();
+      return;
+    }
     event.dataTransfer.setData("application/laptop-id", laptopId);
     event.dataTransfer.effectAllowed = "move";
     setDraggedLaptopId(laptopId);
   };
 
   const handleDropLaptopOnDesk = (deskId: number, laptopIdToDrop: string) => {
+    if (!isAdminAuthenticated) return;
     setLaptops(prevLaptops => {
       const droppedLaptop = prevLaptops.find(l => l.id === laptopIdToDrop);
       if (!droppedLaptop || droppedLaptop.roomId !== currentRoomId) return prevLaptops; 
@@ -233,7 +267,6 @@ export default function HomePage() {
         if (lap.roomId !== currentRoomId) return lap;
 
         if (lap.id === laptopIdToDrop) return { ...lap, locationId: deskId };
-        // If a laptop was already at the target desk, and it's not the one being dropped, unassign its location.
         if (existingLaptopAtDesk && lap.id === existingLaptopAtDesk.id && existingLaptopAtDesk.id !== laptopIdToDrop) {
           return { ...lap, locationId: null }; 
         }
@@ -253,17 +286,14 @@ export default function HomePage() {
       studentOnLaptop = studentsInCurrentRoom.find(s => s.id === laptopOnDesk.studentId);
     }
     setCurrentActionDesk({ desk, laptop: laptopOnDesk, student: studentOnLaptop });
-    setIsDeskActionModalOpen(true);
+    setIsDeskActionModalOpen(true); // Modal itself can open, actions inside are restricted
   };
 
   const handleAssignStudent = (laptopId: string, studentId: string) => {
-    if (!currentRoomId) return;
+    if (!isAdminAuthenticated || !currentRoomId) return;
     setLaptops(laps => laps.map(lap => {
       if (lap.roomId !== currentRoomId) return lap;
-
-      // Assign student to the target laptop
       if (lap.id === laptopId) return { ...lap, studentId: studentId };
-      // If this student was assigned to another laptop, unassign them from that other laptop
       if (lap.studentId === studentId && lap.id !== laptopId) return { ...lap, studentId: null };
       return lap;
     }));
@@ -276,6 +306,7 @@ export default function HomePage() {
   };
   
   const handleUnassignStudent = (laptopId: string) => {
+    if (!isAdminAuthenticated) return;
     setLaptops(laps => laps.map(lap => (lap.id === laptopId && lap.roomId === currentRoomId) ? { ...lap, studentId: null } : lap));
      if (currentActionDesk?.laptop?.id === laptopId) {
         setCurrentActionDesk(prev => prev ? {...prev, laptop: {...prev.laptop!, studentId: null}, student: undefined} : null);
@@ -283,10 +314,12 @@ export default function HomePage() {
   };
 
   const handleUnassignLocation = (laptopId: string) => {
+    if (!isAdminAuthenticated) return;
     setLaptops(laps => laps.map(lap => (lap.id === laptopId && lap.roomId === currentRoomId) ? { ...lap, locationId: null } : lap));
   };
 
   const handleSaveLaptopNotes = (laptopId: string, notes: string) => {
+    if (!isAdminAuthenticated) return;
     setLaptops(laps => laps.map(lap => (lap.id === laptopId && lap.roomId === currentRoomId) ? { ...lap, notes } : lap));
     if (currentActionDesk?.laptop?.id === laptopId) {
         setCurrentActionDesk(prev => prev ? {...prev, laptop: {...prev.laptop!, notes: notes}} : null);
@@ -294,28 +327,33 @@ export default function HomePage() {
   };
   
   const openEditLaptopDialog = useCallback((laptop: Laptop) => {
+    if (!isAdminAuthenticated) return;
     setEditingLaptop(laptop);
     setIsLaptopFormOpen(true);
     setIsDeskActionModalOpen(false);
-  }, []);
+  }, [isAdminAuthenticated]);
 
   const openViewCredentialsDialog = useCallback((laptop: Laptop) => {
+    // Viewing credentials might be allowed for non-admins based on policy.
+    // For now, let's keep it open but actions within edit dialog are restricted.
     setLaptopToView(laptop);
     setIsViewCredentialsOpen(true);
     setIsDeskActionModalOpen(false);
   }, []);
 
   const openAssignStudentDialog = useCallback((laptop: Laptop) => {
+    if (!isAdminAuthenticated) return;
     setLaptopToAssign(laptop);
     setIsAssignStudentOpen(true);
-  }, []);
+  }, [isAdminAuthenticated]);
 
   const requestAddLaptopToDesk = useCallback((desk: Desk) => {
+    if (!isAdminAuthenticated) return;
     setLaptopToCreateAtDesk(desk);
     setEditingLaptop(undefined); 
     setIsLaptopFormOpen(true);
     setIsDeskActionModalOpen(false);
-  }, []);
+  }, [isAdminAuthenticated]);
 
   const laptopsInCurrentRoom = laptops.filter(lap => lap.roomId === currentRoomId);
   const studentsInCurrentRoom = students.filter(stu => stu.roomId === currentRoomId);
@@ -326,10 +364,19 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <header className="bg-primary text-primary-foreground p-4 shadow-md">
-        <h1 className="text-3xl font-bold text-center">
+      <header className="bg-primary text-primary-foreground p-4 shadow-md flex justify-between items-center">
+        <h1 className="text-3xl font-bold">
           Classroom Navigator {currentRoom ? `- ${currentRoom.name}` : ""}
         </h1>
+        {isAdminAuthenticated ? (
+          <Button variant="ghost" onClick={handleAdminLogout} className="text-primary-foreground hover:bg-primary/80">
+            <LogOut className="mr-2 h-5 w-5" /> Logout Admin
+          </Button>
+        ) : (
+          <Button variant="ghost" onClick={() => setIsLoginDialogOpen(true)} className="text-primary-foreground hover:bg-primary/80">
+            <LogIn className="mr-2 h-5 w-5" /> Admin Login
+          </Button>
+        )}
       </header>
 
       <main className="flex-grow container mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
@@ -345,6 +392,7 @@ export default function HomePage() {
               cols={currentRoom.cols}
               corridorsAfterRows={currentRoom.corridorsAfterRows || []}
               corridorsAfterCols={currentRoom.corridorsAfterCols || []}
+              isAdminAuthenticated={isAdminAuthenticated}
             />
           ) : (
             <Card className="h-full flex items-center justify-center">
@@ -377,17 +425,17 @@ export default function HomePage() {
                 </Select>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" className="flex-1" onClick={() => { setEditingRoom(undefined); setIsRoomFormOpen(true); }}>
+                <Button size="sm" className="flex-1" onClick={() => { if (isAdminAuthenticated) {setEditingRoom(undefined); setIsRoomFormOpen(true); }}} disabled={!isAdminAuthenticated}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Room
                 </Button>
                 {currentRoom && (
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => { setEditingRoom(currentRoom); setIsRoomFormOpen(true); }} disabled={!currentRoomId}>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => { if (isAdminAuthenticated) {setEditingRoom(currentRoom); setIsRoomFormOpen(true);}}} disabled={!isAdminAuthenticated || !currentRoomId}>
                     <Edit className="mr-2 h-4 w-4" /> Edit Room
                   </Button>
                 )}
               </div>
                {currentRoom && rooms.length > 1 && (
-                <Button size="sm" variant="destructive" className="w-full" onClick={() => handleDeleteRoom(currentRoom.id)} disabled={!currentRoomId}>
+                <Button size="sm" variant="destructive" className="w-full" onClick={() => handleDeleteRoom(currentRoom.id)} disabled={!isAdminAuthenticated || !currentRoomId || rooms.length <= 1}>
                   <Trash2 className="mr-2 h-4 w-4" /> Delete Current Room
                 </Button>
               )}
@@ -398,7 +446,7 @@ export default function HomePage() {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle className="text-xl flex items-center"><LaptopIconLucide className="mr-2 h-6 w-6 text-primary" />Laptops</CardTitle>
-                <Button size="sm" onClick={() => { setLaptopToCreateAtDesk(null); setEditingLaptop(undefined); setIsLaptopFormOpen(true); }} disabled={!currentRoomId}>
+                <Button size="sm" onClick={() => { if(isAdminAuthenticated) {setLaptopToCreateAtDesk(null); setEditingLaptop(undefined); setIsLaptopFormOpen(true);}}} disabled={!isAdminAuthenticated || !currentRoomId}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Laptop
                 </Button>
               </div>
@@ -411,12 +459,13 @@ export default function HomePage() {
                   <LaptopItem
                     key={laptop.id}
                     laptop={laptop}
-                    isDraggable={true}
+                    isDraggable={isAdminAuthenticated}
                     onDragStart={handleDragStart}
-                    onEdit={() => { setLaptopToCreateAtDesk(null); setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
+                    onEdit={openEditLaptopDialog}
                     onDelete={() => handleDeleteLaptop(laptop.id)}
-                    onViewCredentials={() => { setLaptopToView(laptop); setIsViewCredentialsOpen(true); }}
-                    onAssignStudent={() => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true);}}
+                    onViewCredentials={openViewCredentialsDialog}
+                    onAssignStudent={() => openAssignStudentDialog(laptop)}
+                    isAdminAuthenticated={isAdminAuthenticated}
                   />
                 )) : <p className="text-sm text-center py-4 text-muted-foreground">No unassigned laptops in this room.</p>}
               </ScrollArea>
@@ -430,14 +479,15 @@ export default function HomePage() {
                         key={laptop.id}
                         laptop={laptop}
                         assignedStudent={student}
-                        isDraggable={true}
+                        isDraggable={isAdminAuthenticated}
                         onDragStart={handleDragStart}
-                        onEdit={() => { setLaptopToCreateAtDesk(null); setEditingLaptop(laptop); setIsLaptopFormOpen(true); }}
+                        onEdit={openEditLaptopDialog}
                         onDelete={() => handleDeleteLaptop(laptop.id)}
-                        onViewCredentials={() => { setLaptopToView(laptop); setIsViewCredentialsOpen(true); }}
-                        onAssignStudent={() => { setLaptopToAssign(laptop); setIsAssignStudentOpen(true);}}
+                        onViewCredentials={openViewCredentialsDialog}
+                        onAssignStudent={() => openAssignStudentDialog(laptop)}
                         onUnassignStudent={student ? () => handleUnassignStudent(laptop.id) : undefined}
                         onUnassignLocation={() => handleUnassignLocation(laptop.id)}
+                        isAdminAuthenticated={isAdminAuthenticated}
                       />
                     );
                   }) : <p className="text-sm text-center py-4 text-muted-foreground">No laptops assigned to desks in this room.</p>}
@@ -449,7 +499,7 @@ export default function HomePage() {
             <CardHeader>
                <div className="flex justify-between items-center">
                 <CardTitle className="text-xl flex items-center"><Users className="mr-2 h-6 w-6 text-primary" />Students</CardTitle>
-                <Button size="sm" onClick={() => { setEditingStudent(undefined); setIsStudentFormOpen(true); }} disabled={!currentRoomId}>
+                <Button size="sm" onClick={() => { if(isAdminAuthenticated) {setEditingStudent(undefined); setIsStudentFormOpen(true);}}} disabled={!isAdminAuthenticated || !currentRoomId}>
                   <UserPlus className="mr-2 h-4 w-4" /> Add Student
                 </Button>
               </div>
@@ -464,8 +514,9 @@ export default function HomePage() {
                       key={student.id}
                       student={student}
                       assignedLaptop={assignedLaptop}
-                      onEdit={() => { setEditingStudent(student); setIsStudentFormOpen(true); }}
+                      onEdit={() => { if(isAdminAuthenticated) {setEditingStudent(student); setIsStudentFormOpen(true);}}}
                       onDelete={() => handleDeleteStudent(student.id)}
+                      isAdminAuthenticated={isAdminAuthenticated}
                     />
                   );
                 }) : <p className="text-sm text-center py-4 text-muted-foreground">No students added to this room yet.</p>}
@@ -475,6 +526,11 @@ export default function HomePage() {
         </aside>
       </main>
 
+      <AdminLoginDialog
+        open={isLoginDialogOpen}
+        onOpenChange={setIsLoginDialogOpen}
+        onLogin={handleAdminLogin}
+      />
       <RoomFormDialog
         open={isRoomFormOpen}
         onOpenChange={setIsRoomFormOpen}
@@ -500,6 +556,7 @@ export default function HomePage() {
         students={studentsInCurrentRoom}
         laptops={laptopsInCurrentRoom} 
         onAssign={handleAssignStudent}
+        isAdminAuthenticated={isAdminAuthenticated}
       />}
       {laptopToView && <ViewCredentialsDialog
         open={isViewCredentialsOpen}
@@ -516,6 +573,7 @@ export default function HomePage() {
         onUnassignStudent={handleUnassignStudent}
         onSaveNotes={handleSaveLaptopNotes}
         onAddLaptopToDesk={requestAddLaptopToDesk}
+        isAdminAuthenticated={isAdminAuthenticated}
       />}
       <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
         <AlertDialogContent>
@@ -529,7 +587,7 @@ export default function HomePage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteItem} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogAction onClick={confirmDeleteItem} className="bg-destructive hover:bg-destructive/90" disabled={!isAdminAuthenticated}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -542,3 +600,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    

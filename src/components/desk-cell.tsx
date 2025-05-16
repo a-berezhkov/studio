@@ -14,19 +14,26 @@ interface DeskCellProps {
   student?: Student;
   onDrop: (laptopId: string) => void;
   onClick: () => void;
+  canDrop?: boolean; // New prop to control drop behavior
 }
 
-export function DeskCell({ desk, laptop, student, onDrop, onClick }: DeskCellProps) {
+export function DeskCell({ desk, laptop, student, onDrop, onClick, canDrop = false }: DeskCellProps) {
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
+    if (canDrop) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+    } else {
+      event.dataTransfer.dropEffect = "none";
+    }
   };
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const laptopId = event.dataTransfer.getData("application/laptop-id");
-    if (laptopId) {
-      onDrop(laptopId);
+    if (canDrop) {
+      event.preventDefault();
+      const laptopId = event.dataTransfer.getData("application/laptop-id");
+      if (laptopId) {
+        onDrop(laptopId);
+      }
     }
   };
 
@@ -36,16 +43,17 @@ export function DeskCell({ desk, laptop, student, onDrop, onClick }: DeskCellPro
     <TooltipProvider delayDuration={200}>
       <Card
         className={cn(
-          "aspect-square flex flex-col items-center justify-center p-2 transition-all duration-150 ease-in-out transform hover:scale-105 hover:shadow-lg cursor-pointer",
+          "aspect-square flex flex-col items-center justify-center p-2 transition-all duration-150 ease-in-out transform hover:scale-105 hover:shadow-lg",
           hasLaptop ? "bg-secondary border-primary shadow-primary/20" : "bg-muted/50 hover:bg-accent/30",
+          onClick ? "cursor-pointer" : "cursor-default", // Only show pointer if onClick is available
           "border-2"
         )}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         onClick={onClick}
         aria-label={`Desk ${desk.id}${laptop ? `, occupied by laptop ${laptop.login}` : ', empty'}`}
-        tabIndex={0} // Make it focusable
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
+        tabIndex={onClick ? 0 : -1} // Make it focusable only if clickable
+        onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onClick) onClick(); }}
       >
         <CardContent className="flex flex-col items-center justify-center p-1 w-full h-full">
           <span className="text-xs font-medium text-muted-foreground absolute top-1 right-1.5">{desk.id}</span>
@@ -76,10 +84,12 @@ export function DeskCell({ desk, laptop, student, onDrop, onClick }: DeskCellPro
             )}
           </div>
           {laptop && !student && (
-             <div className="w-4 h-4 md:w-5 md:h-5" /> // Placeholder to keep size consistent
+             <div className="w-4 h-4 md:w-5 md:h-5" /> 
           )}
         </CardContent>
       </Card>
     </TooltipProvider>
   );
 }
+
+    
