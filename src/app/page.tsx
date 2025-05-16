@@ -17,7 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Edit3, Trash2, Eye, UserPlus, Users, Laptop as LaptopIconLucide, Home, Edit, LogIn, LogOut, ShieldAlert, Package, Users2Icon } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, Eye, UserPlus, Laptop as LaptopIconLucide, Home, Edit, LogIn, LogOut, ShieldAlert, Package, Users2Icon, List } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
@@ -25,7 +25,7 @@ import Link from "next/link";
 export type DeskActionData = {
   desk: Desk;
   laptop?: Laptop;
-  students?: Student[]; // Changed to array
+  students?: Student[]; 
 };
 
 const DEFAULT_ROOM_ID = "room-default";
@@ -67,7 +67,6 @@ export default function HomePage() {
 
   const currentRoom = rooms.find(r => r.id === currentRoomId);
 
-  // Data migration for localStorage
   const migrateLocalStorageData = () => {
     const storedLaptopsRaw = localStorage.getItem('laptops');
     if (storedLaptopsRaw) {
@@ -78,7 +77,7 @@ export default function HomePage() {
           migrationNeeded = true;
           return { ...lap, studentIds: lap.studentId ? [lap.studentId] : [], studentId: undefined };
         }
-        if (lap.studentIds === undefined) { // Ensure studentIds always exists
+        if (lap.studentIds === undefined) { 
             migrationNeeded = true;
             return { ...lap, studentIds: [] };
         }
@@ -273,12 +272,8 @@ export default function HomePage() {
           if (typeof formData.password === 'string' && formData.password.length > 0) { 
             updatedLaptop.password = formData.password;
           } else if (formData.password === "" && typeof lap.password === 'string') { 
-            // If password field is explicitly cleared, remove the password
-            // This case might need clarification: do we allow empty passwords or remove the field?
-            // For now, setting to empty string if explicitly cleared.
             updatedLaptop.password = ""; 
           }
-          // If password field is undefined (e.g. not touched in form), current password remains.
           return updatedLaptop;
         }
         return lap;
@@ -289,7 +284,7 @@ export default function HomePage() {
         login: formData.login,
         password: formData.password || "", 
         locationId: laptopToCreateAtDesk ? laptopToCreateAtDesk.id : null,
-        studentIds: [], // Initialize with empty array
+        studentIds: [], 
         notes: "", 
         roomId: currentRoomId,
       };
@@ -344,9 +339,7 @@ export default function HomePage() {
         if (lap.id === laptopIdToDrop) {
           return { ...lap, locationId: deskId, roomId: currentRoomId };
         }
-        // If there was a laptop at the target desk, move it to the source desk of the dropped laptop
         if (existingLaptopAtDesk && lap.id === existingLaptopAtDesk.id) {
-          // Ensure droppedLaptop.locationId is the original location before the drop
           return { ...lap, locationId: droppedLaptop.locationId, roomId: currentRoomId }; 
         }
         return lap;
@@ -389,7 +382,7 @@ export default function HomePage() {
       }
       return lap;
     }));
-    // Optionally close modal or refresh its state if open
+
     if(currentActionDesk?.laptop?.id === laptopId) {
         setCurrentActionDesk(prev => prev ? {
             ...prev,
@@ -507,9 +500,9 @@ export default function HomePage() {
               </Link>
             </Button>
             <Button asChild variant="outline" size="sm" className="px-2 md:px-3">
-              <Link href="/admin/users">
-                <Users className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">Пользователи</span>
+              <Link href="/admin/laptops">
+                <List className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Все ноутбуки</span>
               </Link>
             </Button>
             <Button onClick={handleAdminLogout} variant="outline" size="sm" className="px-2 md:px-3">
@@ -779,3 +772,4 @@ export default function HomePage() {
     </div>
   );
 }
+
